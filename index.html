@@ -100,7 +100,12 @@
       width: min(430px, calc(100vw - 20px));
       display: grid;
       gap: 14px;
+      min-height: 100vh;
+      min-height: 100svh;
       align-content: center;
+      justify-content: center;
+      padding-top: max(10px, env(safe-area-inset-top));
+      padding-bottom: max(14px, env(safe-area-inset-bottom));
     }
     .mode-card, .toolbar, .timeline-shell {
       border: 1px solid var(--line);
@@ -424,10 +429,12 @@
     }
     .bottom-back {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
+      gap: 10px;
       padding-top: 2px;
     }
     .bottom-back button {
+      flex: 0 0 auto;
       border: 1px solid var(--line);
       border-radius: 999px;
       min-height: 42px;
@@ -567,7 +574,7 @@
     <div class="shell home-shell">
       <div class="mode-grid">
         <div class="mode-card">
-          <h3>単体分析</h3>
+          <h3>Single Analysis</h3>
           <p>1本の動画を表示したい時に使用します。</p>
           <div class="pickers">
             <div class="picker-row">
@@ -578,7 +585,7 @@
         </div>
 
         <div class="mode-card">
-          <h3>比較分析</h3>
+          <h3>Compare Analysis</h3>
           <p>２本の動画を比較して表示する時に使用します。</p>
           <div class="pickers">
             <div class="picker-row">
@@ -656,6 +663,7 @@
             <button id="stepForwardButton">+1コマ</button>
           </div>
           <div class="bottom-back">
+            <button id="homeButton">ホーム</button>
             <button id="backButton">戻る</button>
           </div>
         </div>
@@ -674,6 +682,7 @@
     const compareInput = document.getElementById("compareInput");
     const openSingleButton = document.getElementById("openSingleButton");
     const openCompareButton = document.getElementById("openCompareButton");
+    const homeButton = document.getElementById("homeButton");
     const backButton = document.getElementById("backButton");
 
     const statusText = document.getElementById("statusText");
@@ -953,6 +962,11 @@
     openCompareButton.addEventListener("click", openCompare);
 
     backButton.addEventListener("click", () => {
+      pauseAll();
+      showScreen(homeScreen);
+    });
+
+    homeButton.addEventListener("click", () => {
       pauseAll();
       showScreen(homeScreen);
     });
