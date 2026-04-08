@@ -538,6 +538,7 @@
       box-shadow:
         inset 0 1px 0 rgba(255,255,255,0.14),
         0 10px 22px rgba(47, 125, 246, 0.28);
+      font-weight: 700;
     }
     .start-tag {
       font-size: 11px;
@@ -820,6 +821,7 @@
 
     function setStartButtonState(button, active) {
       button.classList.toggle("active-set", active);
+      button.textContent = active ? "設定済み" : "開始位置セット";
     }
 
     function seekAll(ratio) {
