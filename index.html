@@ -258,46 +258,6 @@
         radial-gradient(circle at center, rgba(120,164,255,0.16), transparent 28%),
         linear-gradient(180deg, rgba(18,24,36,0.34), rgba(3,6,12,0.92));
     }
-    .annotation-layer {
-      position: absolute;
-      inset: 0;
-      z-index: 4;
-      cursor: crosshair;
-    }
-    .annotation-layer svg {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    .annotation-line {
-      stroke: #ffd60a;
-      stroke-width: 4;
-      stroke-linecap: round;
-      filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.55));
-    }
-    .annotation-note {
-      position: absolute;
-      z-index: 5;
-      min-width: 110px;
-      max-width: 220px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: rgba(255, 214, 10, 0.96);
-      color: #1e1700;
-      font-size: 13px;
-      line-height: 1.5;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-      transform: translate(-8%, -110%);
-    }
-    .annotation-note::after {
-      content: "";
-      position: absolute;
-      left: 18px;
-      bottom: -10px;
-      border-width: 10px 8px 0 8px;
-      border-style: solid;
-      border-color: rgba(255, 214, 10, 0.96) transparent transparent transparent;
-    }
     .toolbar {
       display: grid;
       gap: 10px;
@@ -340,27 +300,6 @@
       text-align: center;
       letter-spacing: 0.02em;
     }
-    .tool-row {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      align-items: start;
-      padding: 14px 12px 16px;
-      border: 1px solid var(--line);
-      border-radius: 28px;
-      background:
-        linear-gradient(180deg, rgba(18, 31, 56, 0.94), rgba(8, 14, 26, 0.92));
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.04),
-        0 18px 34px rgba(0, 0, 0, 0.18);
-    }
-    .tool-row-title {
-      margin: 0;
-      font-size: 14px;
-      color: var(--muted);
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
     .toolbar button.primary {
       background: linear-gradient(180deg, #58a2ff, var(--accent));
       color: #f4f8ff;
@@ -372,21 +311,6 @@
     .toolbar button.active {
       outline: 2px solid rgba(154, 209, 255, 0.85);
       background: linear-gradient(180deg, rgba(99,179,255,0.26), rgba(255,255,255,0.06));
-    }
-    .annotation-controls {
-      display: flex;
-      gap: 10px;
-      flex-wrap: nowrap;
-      align-items: center;
-    }
-    .annotation-controls input {
-      min-width: 0;
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.06);
-      color: var(--ink);
     }
     .timeline-shell {
       padding: 12px 12px 14px;
@@ -615,9 +539,6 @@
       display: none !important;
     }
     @media (max-width: 720px) {
-      .annotation-controls {
-        width: 100%;
-      }
       .compare-timelines {
         grid-template-columns: 1fr;
       }
@@ -674,25 +595,16 @@
       <div id="singleLayout" class="video-stage single-layout">
         <video id="singleVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
         <div id="singlePlaceholder" class="stage-placeholder">動画が未選択です</div>
-        <div class="annotation-layer" data-stage="single">
-          <svg viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
-        </div>
       </div>
 
       <div id="compareLayout" class="compare-layout hidden">
         <div class="video-stage">
           <video id="leftVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
           <div id="leftPlaceholder" class="stage-placeholder">上動画が未選択です</div>
-          <div class="annotation-layer" data-stage="left">
-            <svg viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
-          </div>
         </div>
         <div class="video-stage">
           <video id="rightVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
           <div id="rightPlaceholder" class="stage-placeholder">下動画が未選択です</div>
-          <div class="annotation-layer" data-stage="right">
-            <svg viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
-          </div>
         </div>
       </div>
 
@@ -741,17 +653,6 @@
         <div class="status" id="statusText">モードを選んで動画を開いてください。</div>
       </div>
 
-      <div class="tool-row">
-        <p class="tool-row-title">注釈を入れる</p>
-        <div class="annotation-controls">
-          <input id="commentInput" type="text" placeholder="コメント" />
-        </div>
-        <div class="toolbar-group">
-          <button id="lineModeButton">線を入れる</button>
-          <button id="commentModeButton">コメント</button>
-          <button id="clearAnnotationsButton">注釈をクリア</button>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -779,10 +680,6 @@
     const leftPlaceholder = document.getElementById("leftPlaceholder");
     const rightPlaceholder = document.getElementById("rightPlaceholder");
 
-    const lineModeButton = document.getElementById("lineModeButton");
-    const commentModeButton = document.getElementById("commentModeButton");
-    const clearAnnotationsButton = document.getElementById("clearAnnotationsButton");
-    const commentInput = document.getElementById("commentInput");
     const speedButtons = document.querySelectorAll(".speed-button");
     const timelineSlider = document.getElementById("timelineSlider");
     const compareTimelines = document.getElementById("compareTimelines");
@@ -797,15 +694,13 @@
     const playButton = document.getElementById("playButton");
     const stepBackButton = document.getElementById("stepBackButton");
     const stepForwardButton = document.getElementById("stepForwardButton");
-    const annotationLayers = Array.from(document.querySelectorAll(".annotation-layer"));
 
     let currentMode = "single";
     let currentSpeed = 1;
     let compareStartLeft = 0;
     let compareStartRight = 0;
     let isPlaying = false;
-    let annotationMode = "none";
-    let pendingLineStart = null;
+    let isRestartingCompareLoop = false;
 
     function showScreen(target) {
       [splashScreen, homeScreen, analysisScreen].forEach((screen) => {
@@ -862,57 +757,6 @@
       speedButtons.forEach((button) => {
         button.classList.toggle("active", Number(button.dataset.speed) === speed);
       });
-    }
-
-    function setAnnotationMode(mode) {
-      annotationMode = mode;
-      pendingLineStart = null;
-      lineModeButton.classList.toggle("active", mode === "line");
-      commentModeButton.classList.toggle("active", mode === "comment");
-      if (mode === "line") setStatus("線モードです。始点と終点を順にタップしてください。");
-      if (mode === "comment") setStatus("コメントモードです。置きたい位置をタップしてください。");
-      if (mode === "none") setStatus("注釈モードを解除しました。");
-    }
-
-    function clearAnnotations() {
-      annotationLayers.forEach((layer) => {
-        layer.querySelector("svg").innerHTML = "";
-        layer.querySelectorAll(".annotation-note").forEach((note) => note.remove());
-      });
-      pendingLineStart = null;
-      setStatus("注釈をクリアしました。");
-    }
-
-    function createLine(layer, start, end) {
-      const svg = layer.querySelector("svg");
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("x1", start.x);
-      line.setAttribute("y1", start.y);
-      line.setAttribute("x2", end.x);
-      line.setAttribute("y2", end.y);
-      line.setAttribute("class", "annotation-line");
-      svg.appendChild(line);
-    }
-
-    function createNote(layer, point, text) {
-      const note = document.createElement("div");
-      note.className = "annotation-note";
-      note.textContent = text;
-      note.style.left = `${point.px}px`;
-      note.style.top = `${point.py}px`;
-      layer.appendChild(note);
-    }
-
-    function getPoint(layer, event) {
-      const rect = layer.getBoundingClientRect();
-      const px = event.clientX - rect.left;
-      const py = event.clientY - rect.top;
-      return {
-        x: (px / rect.width) * 1000,
-        y: (py / rect.height) * 1000,
-        px,
-        py
-      };
     }
 
     function setVideoSource(video, placeholder, file) {
@@ -993,19 +837,61 @@
       updateTimelineFromVideo();
     }
 
-    function playAll() {
-      activeVideos().forEach((video) => {
+    async function playAll() {
+      const videos = activeVideos();
+      videos.forEach((video) => {
         video.playbackRate = currentSpeed;
-        video.play();
+        video.loop = currentMode === "single";
       });
+
+      const results = await Promise.allSettled(
+        videos.map((video) => video.play())
+      );
+
+      const failed = results.some((result) => result.status === "rejected");
+      if (failed) {
+        isPlaying = false;
+        playButton.textContent = "同時再生";
+        setStatus("iPhoneでは比較再生時の音声制約があるため、動画をミュートして再生します。");
+        videos.forEach((video) => {
+          video.muted = true;
+          video.defaultMuted = true;
+        });
+
+        const retryResults = await Promise.allSettled(
+          videos.map((video) => video.play())
+        );
+        const retryFailed = retryResults.some((result) => result.status === "rejected");
+        if (retryFailed) {
+          setStatus("同時再生を開始できませんでした。動画を読み込み直してください。");
+          return false;
+        }
+      }
+
       isPlaying = true;
       playButton.textContent = "停止";
+      return true;
     }
 
     function pauseAll() {
-      activeVideos().forEach((video) => video.pause());
+      activeVideos().forEach((video) => {
+        video.pause();
+        video.loop = false;
+      });
       isPlaying = false;
+      isRestartingCompareLoop = false;
       playButton.textContent = "同時再生";
+    }
+
+    async function restartCompareLoop() {
+      if (!isPlaying || currentMode !== "compare" || isRestartingCompareLoop) return;
+      isRestartingCompareLoop = true;
+      leftVideo.pause();
+      rightVideo.pause();
+      leftVideo.currentTime = compareStartLeft;
+      rightVideo.currentTime = compareStartRight;
+      await playAll();
+      isRestartingCompareLoop = false;
     }
 
     function openSingle() {
@@ -1014,6 +900,8 @@
         return;
       }
       setMode("single");
+      singleVideo.muted = false;
+      singleVideo.defaultMuted = false;
       setVideoSource(singleVideo, singlePlaceholder, singleInput.files[0]);
       showScreen(analysisScreen);
       setStatus("単体分析を開きました。");
@@ -1028,6 +916,11 @@
         return;
       }
       setMode("compare");
+      isRestartingCompareLoop = false;
+      leftVideo.muted = true;
+      leftVideo.defaultMuted = true;
+      rightVideo.muted = true;
+      rightVideo.defaultMuted = true;
       setVideoSource(leftVideo, leftPlaceholder, files[0]);
       setVideoSource(rightVideo, rightPlaceholder, files[1]);
       compareStartLeft = 0;
@@ -1052,40 +945,6 @@
       button.addEventListener("click", () => applySpeed(Number(button.dataset.speed)));
     });
 
-    lineModeButton.addEventListener("click", () => {
-      setAnnotationMode(annotationMode === "line" ? "none" : "line");
-    });
-
-    commentModeButton.addEventListener("click", () => {
-      setAnnotationMode(annotationMode === "comment" ? "none" : "comment");
-    });
-
-    clearAnnotationsButton.addEventListener("click", clearAnnotations);
-
-    annotationLayers.forEach((layer) => {
-      layer.addEventListener("click", (event) => {
-        if (annotationMode === "none") return;
-        pauseAll();
-        const point = getPoint(layer, event);
-        if (annotationMode === "line") {
-          if (!pendingLineStart || pendingLineStart.stage !== layer.dataset.stage) {
-            pendingLineStart = { stage: layer.dataset.stage, ...point };
-            setStatus("終点をタップしてください。");
-            return;
-          }
-          createLine(layer, pendingLineStart, point);
-          pendingLineStart = null;
-          setStatus("線を追加しました。");
-          return;
-        }
-        if (annotationMode === "comment") {
-          const text = commentInput.value.trim() || "コメント";
-          createNote(layer, point, text);
-          setStatus("コメントを追加しました。");
-        }
-      });
-    });
-
     timelineSlider.addEventListener("input", (event) => {
       syncSliderFill();
       seekAll(Number(event.target.value) / 1000);
@@ -1101,7 +960,7 @@
       seekVideo(rightVideo, rightSlider, rightTimeLabel, Number(event.target.value) / 1000);
     });
 
-    playButton.addEventListener("click", () => {
+    playButton.addEventListener("click", async () => {
       if (isPlaying) {
         pauseAll();
         setStatus("再生を停止しました。");
@@ -1114,7 +973,7 @@
       } else {
         setStatus("再生を開始しました。");
       }
-      playAll();
+      await playAll();
     });
     stepBackButton.addEventListener("click", () => stepAll(-1 / 30));
     stepForwardButton.addEventListener("click", () => stepAll(1 / 30));
@@ -1136,6 +995,13 @@
     [singleVideo, leftVideo, rightVideo].forEach((video) => {
       video.addEventListener("timeupdate", updateTimelineFromVideo);
       video.addEventListener("loadedmetadata", updateTimelineFromVideo);
+    });
+
+    [leftVideo, rightVideo].forEach((video) => {
+      video.addEventListener("ended", () => {
+        if (currentMode !== "compare" || !isPlaying) return;
+        restartCompareLoop();
+      });
     });
 
     syncSliderFill();
