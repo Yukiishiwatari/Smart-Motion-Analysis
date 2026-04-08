@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Smart Motion Analysis</title>
   <style>
     :root {
@@ -17,8 +17,14 @@
       --accent-2: #63b3ff;
       --danger: #ff453a;
     }
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
     html, body { height: 100%; }
+    html {
+      touch-action: manipulation;
+    }
     body {
       margin: 0;
       font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
@@ -27,6 +33,7 @@
         radial-gradient(circle at top, rgba(58, 107, 196, 0.22), transparent 28%),
         linear-gradient(180deg, #09111f 0%, #02060d 100%);
       -webkit-font-smoothing: antialiased;
+      touch-action: manipulation;
     }
     button, input {
       font: inherit;
@@ -35,6 +42,7 @@
       display: none;
       min-height: 100vh;
       min-height: 100svh;
+      touch-action: manipulation;
     }
     .screen.active {
       display: block;
@@ -202,6 +210,7 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.04),
         inset 0 0 0 1px rgba(255, 255, 255, 0.03),
         0 20px 44px rgba(0, 0, 0, 0.28);
+      touch-action: none;
     }
     .single-layout {
       height: clamp(270px, 38svh, 340px);
@@ -221,6 +230,20 @@
       object-fit: contain;
       background: #000;
       display: block;
+      pointer-events: none;
+      -webkit-touch-callout: none;
+    }
+    video::-webkit-media-controls {
+      display: none !important;
+      -webkit-appearance: none;
+    }
+    video::-webkit-media-controls-enclosure {
+      display: none !important;
+      -webkit-appearance: none;
+    }
+    video::-webkit-media-controls-panel {
+      display: none !important;
+      -webkit-appearance: none;
     }
     .stage-placeholder {
       position: absolute;
@@ -649,7 +672,7 @@
       </div>
 
       <div id="singleLayout" class="video-stage single-layout">
-        <video id="singleVideo"></video>
+        <video id="singleVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
         <div id="singlePlaceholder" class="stage-placeholder">動画が未選択です</div>
         <div class="annotation-layer" data-stage="single">
           <svg viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
@@ -658,14 +681,14 @@
 
       <div id="compareLayout" class="compare-layout hidden">
         <div class="video-stage">
-          <video id="leftVideo"></video>
+          <video id="leftVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
           <div id="leftPlaceholder" class="stage-placeholder">上動画が未選択です</div>
           <div class="annotation-layer" data-stage="left">
             <svg viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
           </div>
         </div>
         <div class="video-stage">
-          <video id="rightVideo"></video>
+          <video id="rightVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
           <div id="rightPlaceholder" class="stage-placeholder">下動画が未選択です</div>
           <div class="annotation-layer" data-stage="right">
             <svg viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
@@ -800,6 +823,12 @@
     }
 
     window.setNativeStatus = setStatus;
+
+    ["gesturestart", "gesturechange", "gestureend"].forEach((eventName) => {
+      document.addEventListener(eventName, (event) => {
+        event.preventDefault();
+      }, { passive: false });
+    });
 
     splashScreen.addEventListener("click", moveToHomeScreen, { once: true });
     splashScreen.addEventListener("touchstart", moveToHomeScreen, { once: true });
