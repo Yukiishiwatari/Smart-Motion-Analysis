@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'none'; font-src 'self' data:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'self';" />
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), usb=(), payment=(), accelerometer=(), gyroscope=()" />
+  <meta name="referrer" content="no-referrer" />
   <title>Smart Motion Analysis</title>
   <style>
     :root {
@@ -540,6 +543,7 @@
         inset 0 0 0 1px rgba(255, 255, 255, 0.03),
         0 20px 44px rgba(0, 0, 0, 0.28);
       touch-action: none;
+      user-select: none;
     }
     .single-layout {
       height: clamp(270px, 38svh, 340px);
@@ -561,6 +565,8 @@
       display: block;
       pointer-events: none;
       -webkit-touch-callout: none;
+      transform-origin: center center;
+      will-change: transform;
     }
     video::-webkit-media-controls {
       display: none !important;
@@ -586,6 +592,20 @@
       background:
         radial-gradient(circle at center, rgba(120,164,255,0.16), transparent 28%),
         linear-gradient(180deg, rgba(18,24,36,0.34), rgba(3,6,12,0.92));
+    }
+    .video-stage.is-zoomed::after {
+      content: "ピンチで拡大中";
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      color: rgba(244, 248, 255, 0.9);
+      background: rgba(5, 12, 22, 0.64);
+      border: 1px solid rgba(154, 215, 255, 0.22);
+      pointer-events: none;
     }
     .toolbar {
       display: grid;
@@ -948,11 +968,11 @@
       </div>
 
       <div id="compareLayout" class="compare-layout hidden">
-        <div class="video-stage">
+        <div id="leftStage" class="video-stage">
           <video id="leftVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
           <div id="leftPlaceholder" class="stage-placeholder">上動画が未選択です</div>
         </div>
-        <div class="video-stage">
+        <div id="rightStage" class="video-stage">
           <video id="rightVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
           <div id="rightPlaceholder" class="stage-placeholder">下動画が未選択です</div>
         </div>
@@ -1025,6 +1045,8 @@
 
     const singleLayout = document.getElementById("singleLayout");
     const compareLayout = document.getElementById("compareLayout");
+    const leftStage = document.getElementById("leftStage");
+    const rightStage = document.getElementById("rightStage");
 
     const singleVideo = document.getElementById("singleVideo");
     const leftVideo = document.getElementById("leftVideo");
@@ -1057,6 +1079,8 @@
     let isRestartingCompareLoop = false;
     let lastSplashActivationAt = 0;
     let analysisEnterTimeout = null;
+    const objectUrls = new WeakMap();
+    const zoomStates = new WeakMap();
 
     function showScreen(target) {
       [splashScreen, homeScreen, analysisScreen].forEach((screen) => {
@@ -1126,8 +1150,164 @@
 
     window.setNativeStatus = setStatus;
 
+    function revokeVideoSource(video) {
+      const currentUrl = objectUrls.get(video);
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
+        objectUrls.delete(video);
+      }
+    }
+
+    function isSupportedVideoFile(file) {
+      if (!file) return false;
+      if (!file.type) return true;
+      return file.type.startsWith("video/");
+    }
+
+    function validateVideoFile(file) {
+      if (!file) {
+        setStatus("動画ファイルを選択してください。");
+        return false;
+      }
+      if (!isSupportedVideoFile(file)) {
+        setStatus("動画ファイルのみ選択できます。");
+        return false;
+      }
+      return true;
+    }
+
+    function getDistance(touchA, touchB) {
+      return Math.hypot(touchA.clientX - touchB.clientX, touchA.clientY - touchB.clientY);
+    }
+
+    function getMidpoint(touchA, touchB) {
+      return {
+        x: (touchA.clientX + touchB.clientX) / 2,
+        y: (touchA.clientY + touchB.clientY) / 2
+      };
+    }
+
+    function clampPan(stage, video, scale, nextX, nextY) {
+      const maxX = Math.max(0, ((stage.clientWidth * scale) - stage.clientWidth) / 2);
+      const maxY = Math.max(0, ((stage.clientHeight * scale) - stage.clientHeight) / 2);
+      return {
+        x: Math.max(-maxX, Math.min(maxX, nextX)),
+        y: Math.max(-maxY, Math.min(maxY, nextY))
+      };
+    }
+
+    function applyZoomTransform(stage, video, state) {
+      const clamped = clampPan(stage, video, state.scale, state.offsetX, state.offsetY);
+      state.offsetX = clamped.x;
+      state.offsetY = clamped.y;
+      video.style.transform = `translate(${state.offsetX}px, ${state.offsetY}px) scale(${state.scale})`;
+      stage.classList.toggle("is-zoomed", state.scale > 1.01);
+    }
+
+    function resetZoom(stage, video) {
+      const state = zoomStates.get(stage);
+      if (!state) return;
+      state.scale = 1;
+      state.offsetX = 0;
+      state.offsetY = 0;
+      state.startScale = 1;
+      state.startOffsetX = 0;
+      state.startOffsetY = 0;
+      state.pinchDistance = 0;
+      state.isPinching = false;
+      state.panPointerId = null;
+      state.panStartX = 0;
+      state.panStartY = 0;
+      applyZoomTransform(stage, video, state);
+    }
+
+    function setupZoom(stage, video) {
+      const state = {
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
+        startScale: 1,
+        startOffsetX: 0,
+        startOffsetY: 0,
+        pinchDistance: 0,
+        pinchMidpoint: null,
+        isPinching: false,
+        panPointerId: null,
+        panStartX: 0,
+        panStartY: 0
+      };
+      zoomStates.set(stage, state);
+
+      stage.addEventListener("touchstart", (event) => {
+        if (event.touches.length === 2) {
+          event.preventDefault();
+          state.isPinching = true;
+          state.pinchDistance = getDistance(event.touches[0], event.touches[1]);
+          state.startScale = state.scale;
+          state.startOffsetX = state.offsetX;
+          state.startOffsetY = state.offsetY;
+          state.pinchMidpoint = getMidpoint(event.touches[0], event.touches[1]);
+          return;
+        }
+        if (event.touches.length === 1 && state.scale > 1.01) {
+          event.preventDefault();
+          state.panStartX = event.touches[0].clientX - state.offsetX;
+          state.panStartY = event.touches[0].clientY - state.offsetY;
+        }
+      }, { passive: false });
+
+      stage.addEventListener("touchmove", (event) => {
+        if (event.touches.length === 2) {
+          event.preventDefault();
+          const nextDistance = getDistance(event.touches[0], event.touches[1]);
+          const ratio = state.pinchDistance ? nextDistance / state.pinchDistance : 1;
+          state.scale = Math.max(1, Math.min(4, state.startScale * ratio));
+          const midpoint = getMidpoint(event.touches[0], event.touches[1]);
+          state.offsetX = state.startOffsetX + (midpoint.x - state.pinchMidpoint.x);
+          state.offsetY = state.startOffsetY + (midpoint.y - state.pinchMidpoint.y);
+          applyZoomTransform(stage, video, state);
+          return;
+        }
+        if (event.touches.length === 1 && state.scale > 1.01) {
+          event.preventDefault();
+          state.offsetX = event.touches[0].clientX - state.panStartX;
+          state.offsetY = event.touches[0].clientY - state.panStartY;
+          applyZoomTransform(stage, video, state);
+        }
+      }, { passive: false });
+
+      stage.addEventListener("touchend", (event) => {
+        if (event.touches.length < 2) {
+          state.isPinching = false;
+          state.pinchDistance = 0;
+        }
+        if (event.touches.length === 1 && state.scale > 1.01) {
+          state.panStartX = event.touches[0].clientX - state.offsetX;
+          state.panStartY = event.touches[0].clientY - state.offsetY;
+        }
+        if (state.scale <= 1.01) {
+          resetZoom(stage, video);
+        }
+      });
+
+      stage.addEventListener("touchcancel", () => {
+        if (state.scale <= 1.01) {
+          resetZoom(stage, video);
+          return;
+        }
+        state.isPinching = false;
+        state.pinchDistance = 0;
+      });
+
+      stage.addEventListener("dblclick", () => {
+        resetZoom(stage, video);
+        setStatus("拡大表示をリセットしました。");
+      });
+    }
+
     ["gesturestart", "gesturechange", "gestureend"].forEach((eventName) => {
       document.addEventListener(eventName, (event) => {
+        if (event.target instanceof Element && event.target.closest(".video-stage")) return;
         event.preventDefault();
       }, { passive: false });
     });
@@ -1167,14 +1347,20 @@
     }
 
     function setVideoSource(video, placeholder, file) {
+      const stage = video.closest(".video-stage");
+      revokeVideoSource(video);
       if (!file) {
         video.removeAttribute("src");
         video.load();
         placeholder.classList.remove("hidden");
+        if (stage) resetZoom(stage, video);
         return;
       }
-      video.src = URL.createObjectURL(file);
+      const objectUrl = URL.createObjectURL(file);
+      objectUrls.set(video, objectUrl);
+      video.src = objectUrl;
       placeholder.classList.add("hidden");
+      if (stage) resetZoom(stage, video);
     }
 
     function currentReferenceVideo() {
@@ -1307,16 +1493,20 @@
     }
 
     function openSingle() {
-      if (!singleInput.files[0]) {
+      const file = singleInput.files[0];
+      if (!file) {
         setStatus("単体分析では動画を1本選んでください。");
+        return;
+      }
+      if (!validateVideoFile(file)) {
         return;
       }
       animateIntoAnalysis(singleModeCard, () => {
         setMode("single");
         singleVideo.muted = false;
         singleVideo.defaultMuted = false;
-        setVideoSource(singleVideo, singlePlaceholder, singleInput.files[0]);
-        setStatus("単体分析を開きました。");
+        setVideoSource(singleVideo, singlePlaceholder, file);
+        setStatus("単体分析を開きました。動画上で二本指ズームできます。");
         applySpeed(currentSpeed);
         updateTimelineFromVideo();
       });
@@ -1326,6 +1516,9 @@
       const files = Array.from(compareInput.files || []);
       if (files.length < 2) {
         setStatus("比較分析では上下2本の動画が必要です。");
+        return;
+      }
+      if (!files.every(validateVideoFile)) {
         return;
       }
       animateIntoAnalysis(compareModeCard, () => {
@@ -1344,6 +1537,7 @@
         setStartButtonState(setLeftStartButton, false);
         setStartButtonState(setRightStartButton, false);
         applySpeed(currentSpeed);
+        setStatus("比較分析を開きました。各動画を二本指で拡大できます。");
         updateTimelineFromVideo();
       });
     }
@@ -1417,6 +1611,14 @@
     [singleVideo, leftVideo, rightVideo].forEach((video) => {
       video.addEventListener("timeupdate", updateTimelineFromVideo);
       video.addEventListener("loadedmetadata", updateTimelineFromVideo);
+      video.addEventListener("error", () => {
+        const stage = video.closest(".video-stage");
+        revokeVideoSource(video);
+        video.removeAttribute("src");
+        video.load();
+        if (stage) resetZoom(stage, video);
+        setStatus("動画の読み込みに失敗しました。別のファイルを選択してください。");
+      });
     });
 
     [leftVideo, rightVideo].forEach((video) => {
@@ -1429,6 +1631,13 @@
     syncSliderFill();
     syncMiniSliderFill(leftSlider);
     syncMiniSliderFill(rightSlider);
+    setupZoom(singleLayout, singleVideo);
+    setupZoom(leftStage, leftVideo);
+    setupZoom(rightStage, rightVideo);
+
+    window.addEventListener("beforeunload", () => {
+      [singleVideo, leftVideo, rightVideo].forEach(revokeVideoSource);
+    });
   </script>
 </body>
 </html>
