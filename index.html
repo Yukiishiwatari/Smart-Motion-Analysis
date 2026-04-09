@@ -1089,6 +1089,7 @@
     let isRestartingCompareLoop = false;
     let lastSplashActivationAt = 0;
     let analysisEnterTimeout = null;
+    let compareLayoutRefreshTimeout = null;
     const objectUrls = new WeakMap();
     const zoomStates = new WeakMap();
     let compareLayoutMode = "horizontal";
@@ -1380,10 +1381,26 @@
       setCompareLayoutMode(nextMode);
     }
 
-    function scheduleCompareLayoutRefresh() {
+    function scheduleCompareLayoutRefresh(attempt = 0) {
+      if (compareLayoutRefreshTimeout && attempt === 0) {
+        window.clearTimeout(compareLayoutRefreshTimeout);
+        compareLayoutRefreshTimeout = null;
+      }
+
       window.requestAnimationFrame(() => {
         pickCompareLayoutMode();
-        window.setTimeout(pickCompareLayoutMode, 120);
+
+        const hasLeftMeta = (leftVideo.videoWidth || 0) > 0 && (leftVideo.videoHeight || 0) > 0;
+        const hasRightMeta = (rightVideo.videoWidth || 0) > 0 && (rightVideo.videoHeight || 0) > 0;
+        const shouldRetry = currentMode === "compare" && (!hasLeftMeta || !hasRightMeta) && attempt < 12;
+
+        if (shouldRetry) {
+          compareLayoutRefreshTimeout = window.setTimeout(() => {
+            scheduleCompareLayoutRefresh(attempt + 1);
+          }, 120);
+        } else {
+          compareLayoutRefreshTimeout = null;
+        }
       });
     }
 
