@@ -1069,6 +1069,8 @@
     const compareTimelines = document.getElementById("compareTimelines");
     const leftSlider = document.getElementById("leftSlider");
     const rightSlider = document.getElementById("rightSlider");
+    const leftLabel = document.getElementById("leftLabel");
+    const rightLabel = document.getElementById("rightLabel");
     const leftTimeLabel = document.getElementById("leftTimeLabel");
     const rightTimeLabel = document.getElementById("rightTimeLabel");
     const setLeftStartButton = document.getElementById("setLeftStartButton");
@@ -1349,6 +1351,17 @@
       compareLayoutMode = mode;
       compareLayout.classList.toggle("layout-vertical", mode === "vertical");
       compareLayout.classList.toggle("layout-horizontal", mode !== "vertical");
+      leftLabel.textContent = mode === "vertical" ? "左動画" : "上動画";
+      rightLabel.textContent = mode === "vertical" ? "右動画" : "下動画";
+      leftPlaceholder.textContent = mode === "vertical" ? "左動画が未選択です" : "上動画が未選択です";
+      rightPlaceholder.textContent = mode === "vertical" ? "右動画が未選択です" : "下動画が未選択です";
+    }
+
+    function compareSlotName(side) {
+      if (compareLayoutMode === "vertical") {
+        return side === "left" ? "左動画" : "右動画";
+      }
+      return side === "left" ? "上動画" : "下動画";
     }
 
     function pickCompareLayoutMode() {
