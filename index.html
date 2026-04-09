@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Smart Motion Analysis</title>
+  <style>
+    :root {
+      --bg: #060b14;
+      --panel: rgba(10, 18, 34, 0.92);
+      --panel-soft: rgba(16, 28, 48, 0.86);
+      --surface: #0d1626;
+      --ink: #f4f8ff;
+      --muted: #9eb0c9;
+      --line: rgba(120, 164, 255, 0.16);
+      --accent: #2f7df6;
+      --accent-2: #63b3ff;
+      --accent-3: #9ad7ff;
+      --danger: #ff453a;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body { height: 100%; }
+    html {
+      touch-action: manipulation;
+    }
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, rgba(58, 107, 196, 0.22), transparent 28%),
+        linear-gradient(180deg, #09111f 0%, #02060d 100%);
+      -webkit-font-smoothing: antialiased;
+      touch-action: manipulation;
+      overflow-x: hidden;
+    }
+    button, input {
+      font: inherit;
+    }
+    .screen {
+      display: none;
+      min-height: 100vh;
+      min-height: 100svh;
+      touch-action: manipulation;
+    }
+    .screen.active {
+      display: block;
+      animation: screenReveal 520ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .screen.is-transitioning-out {
+      pointer-events: none;
+      animation: screenFadeOut 260ms cubic-bezier(0.55, 0.08, 0.68, 0.53) forwards;
+    }
+    .splash {
+      padding: 20px;
+    }
+    .screen.active.splash {
+      display: grid;
+      place-items: center;
+    }
+    @keyframes screenReveal {
+      from {
+        opacity: 0;
+        transform: translateY(22px) scale(0.975);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    @keyframes screenFadeOut {
+      from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.985);
+      }
+    }
+    @keyframes screenGlow {
+      0% {
+        opacity: 0;
+        transform: scale(0.94);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1.02);
+      }
+    }
+    @keyframes floatPulse {
+      0%, 100% {
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+      50% {
+        transform: translate3d(0, -10px, 0) scale(1.035);
+      }
+    }
+    @keyframes cardReveal {
+      from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    @keyframes shimmerSweep {
+      from {
+        transform: translateX(-140%);
+      }
+      to {
+        transform: translateX(180%);
+      }
+    }
+    @keyframes pulseRing {
+      0% {
+        box-shadow: 0 0 0 0 rgba(99, 179, 255, 0.26);
+      }
+      70% {
+        box-shadow: 0 0 0 18px rgba(99, 179, 255, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(99, 179, 255, 0);
+      }
+    }
+    @keyframes analysisShellReveal {
+      from {
+        opacity: 0;
+        transform: translateY(28px) scale(0.97);
+        filter: blur(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+    }
+    @keyframes stageCascade {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @keyframes selectedCardPulse {
+      0% {
+        transform: translateY(0) scale(1);
+        box-shadow:
+          0 16px 42px rgba(0, 0, 0, 0.24),
+          inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      }
+      45% {
+        transform: translateY(-10px) scale(1.025);
+        box-shadow:
+          0 34px 72px rgba(33, 95, 196, 0.34),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      }
+      100% {
+        transform: translateY(-2px) scale(0.995);
+        box-shadow:
+          0 12px 26px rgba(0, 0, 0, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+    }
+    .splash-card {
+      position: relative;
+      overflow: hidden;
+      width: min(430px, 100%);
+      text-align: center;
+      padding: 52px 28px;
+      border-radius: 36px;
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle at top, rgba(125, 182, 255, 0.22), transparent 34%),
+        linear-gradient(180deg, rgba(18, 32, 58, 0.94), rgba(8, 14, 26, 0.96));
+      box-shadow:
+        0 28px 90px rgba(0, 0, 0, 0.38),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      animation: cardReveal 520ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .splash-card::before {
+      content: "";
+      position: absolute;
+      inset: -30% 20% auto -30%;
+      height: 180px;
+      background: radial-gradient(circle, rgba(154, 215, 255, 0.22), transparent 70%);
+      filter: blur(18px);
+      animation: screenGlow 700ms cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: none;
+    }
+    .splash-card::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 40%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+      opacity: 0.55;
+      transform: translateX(-140%);
+      animation: shimmerSweep 1.6s ease-out 280ms 1 both;
+      pointer-events: none;
+    }
+    .splash h1 {
+      margin: 0;
+      font-size: clamp(40px, 7vw, 72px);
+      line-height: 1.02;
+    }
+    .splash p {
+      margin: 18px auto 0;
+      max-width: 620px;
+      font-size: 17px;
+      line-height: 1.8;
+      color: var(--muted);
+    }
+    .tap-hint {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 28px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      color: var(--accent-3);
+      background: rgba(76, 128, 216, 0.12);
+      border: 1px solid rgba(120, 164, 255, 0.18);
+      animation:
+        floatPulse 2.6s ease-in-out infinite,
+        pulseRing 2.6s ease-in-out infinite;
+    }
+    .shell {
+      width: min(430px, calc(100vw - 20px));
+      min-height: 100vh;
+      min-height: 100svh;
+      margin: 0 auto;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 10px;
+      padding: max(10px, env(safe-area-inset-top)) 10px max(14px, env(safe-area-inset-bottom)) 10px;
+    }
+    .home-shell {
+      width: min(430px, calc(100vw - 20px));
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 16px;
+      min-height: 100vh;
+      min-height: 100svh;
+      padding-top: max(10px, env(safe-area-inset-top));
+      padding-bottom: max(14px, env(safe-area-inset-bottom));
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .home-shell::before,
+    .home-shell::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      border-radius: 50%;
+      filter: blur(28px);
+      opacity: 0.78;
+      animation: floatPulse 5.8s ease-in-out infinite;
+    }
+    .home-shell::before {
+      width: 180px;
+      height: 180px;
+      top: 10%;
+      right: -48px;
+      background: radial-gradient(circle, rgba(84, 151, 255, 0.4), transparent 68%);
+    }
+    .home-shell::after {
+      width: 160px;
+      height: 160px;
+      bottom: 12%;
+      left: -42px;
+      background: radial-gradient(circle, rgba(56, 117, 222, 0.32), transparent 68%);
+      animation-delay: 1.1s;
+    }
+    .home-content {
+      display: grid;
+      align-content: center;
+      justify-content: center;
+    }
+    .home-content.is-launching .mode-card {
+      opacity: 0.42;
+      transform: scale(0.985);
+      transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease;
+      filter: saturate(0.8);
+    }
+    .home-content.is-launching .mode-card.launching {
+      opacity: 1;
+      filter: none;
+      animation: selectedCardPulse 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      z-index: 2;
+    }
+    .mode-grid.home-mode-grid {
+      gap: 18px;
+    }
+    .home-footer {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .home-footer button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      min-height: 36px;
+      min-width: 88px;
+      padding: 6px 14px;
+      cursor: pointer;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+      color: var(--ink);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.04),
+        0 10px 18px rgba(0, 0, 0, 0.14);
+      font-size: 14px;
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+    .home-footer button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(120, 164, 255, 0.28);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.06),
+        0 14px 22px rgba(0, 0, 0, 0.18);
+    }
+    .mode-card, .toolbar, .timeline-shell {
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+    }
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .mode-card {
+      position: relative;
+      overflow: hidden;
+      padding: 24px 20px 22px;
+      background:
+        linear-gradient(180deg, rgba(21, 37, 66, 0.98), rgba(7, 13, 25, 0.98));
+      box-shadow:
+        0 16px 42px rgba(0, 0, 0, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms ease, border-color 260ms ease;
+      animation: cardReveal 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .home-content .mode-card:nth-child(2) {
+      animation-delay: 80ms;
+    }
+    .mode-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, rgba(132, 193, 255, 0.16), transparent 44%),
+        linear-gradient(180deg, transparent 56%, rgba(255, 255, 255, 0.03));
+      pointer-events: none;
+    }
+    .mode-card::after {
+      content: "";
+      position: absolute;
+      top: -20%;
+      right: -8%;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(120, 185, 255, 0.14), transparent 70%);
+      filter: blur(10px);
+      pointer-events: none;
+    }
+    .mode-card-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(120, 164, 255, 0.18);
+      background: rgba(84, 151, 255, 0.08);
+      color: var(--accent-3);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      backdrop-filter: blur(12px);
+    }
+    .mode-card-badge::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, var(--accent-3), var(--accent));
+      box-shadow: 0 0 14px rgba(99, 179, 255, 0.45);
+    }
+    .mode-card:hover {
+      transform: translateY(-6px) scale(1.01);
+      box-shadow:
+        0 28px 64px rgba(0, 0, 0, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      border-color: rgba(120, 164, 255, 0.26);
+    }
+    .mode-card:active {
+      transform: translateY(-2px) scale(0.992);
+    }
+    .mode-card h3 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0.035em;
+    }
+    .mode-card p {
+      margin: 12px 0 20px;
+      color: #b3c3d9;
+      line-height: 1.8;
+      font-size: 14px;
+    }
+    .mode-card strong {
+      color: var(--accent);
+    }
+    .pickers {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .picker-row {
+      display: grid;
+      gap: 10px;
+    }
+    .picker-row input[type="file"] {
+      width: 100%;
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+      color: var(--ink);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 10px 22px rgba(0, 0, 0, 0.12);
+      transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+    .picker-row input[type="file"]:hover {
+      border-color: rgba(120, 164, 255, 0.26);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 14px 28px rgba(0, 0, 0, 0.16);
+    }
+    .picker-row input[type="file"]::file-selector-button {
+      border: 0;
+      margin-right: 12px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      font-weight: 700;
+      color: #f4f8ff;
+      background: linear-gradient(180deg, #8bcbff, #3c89ff 72%, #276be0);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.14),
+        0 14px 22px rgba(47, 125, 246, 0.32);
+      cursor: pointer;
+    }
+    .picker-row input[type="file"]::-webkit-file-upload-button {
+      border: 0;
+      margin-right: 12px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      font-weight: 700;
+      color: #f4f8ff;
+      background: linear-gradient(180deg, #8bcbff, #3c89ff 72%, #276be0);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.14),
+        0 14px 22px rgba(47, 125, 246, 0.32);
+      cursor: pointer;
+    }
+    .cta {
+      border: 0;
+      border-radius: 999px;
+      min-height: 58px;
+      padding: 16px 24px;
+      cursor: pointer;
+      font-weight: 700;
+      color: #f4f8ff;
+      background: linear-gradient(180deg, #7ec1ff, #3f8fff 68%, #2a6ee2);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.14),
+        0 16px 32px rgba(47, 125, 246, 0.32);
+      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+    }
+    .cta.secondary {
+      color: #031222;
+      background: linear-gradient(180deg, #d2efff, #7ec7ff 72%, #5aaaf4);
+    }
+    .cta:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        0 22px 38px rgba(47, 125, 246, 0.36);
+      filter: brightness(1.04);
+    }
+    .cta:active {
+      transform: translateY(0) scale(0.985);
+    }
+    .analysis-shell-enter {
+      animation: analysisShellReveal 520ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .analysis-shell-enter .toolbar {
+      animation: stageCascade 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .analysis-shell-enter .video-stage,
+    .analysis-shell-enter .compare-layout {
+      animation: stageCascade 520ms cubic-bezier(0.22, 1, 0.36, 1) 60ms both;
+    }
+    .analysis-shell-enter .timeline-shell {
+      animation: stageCascade 560ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+    }
+    .hint {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .video-stage {
+      width: 100%;
+      min-height: 0;
+      border-radius: 0;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(10, 16, 28, 0.98), rgba(0, 0, 0, 1));
+      border: 1px solid rgba(120, 164, 255, 0.16);
+      position: relative;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+        0 20px 44px rgba(0, 0, 0, 0.28);
+      touch-action: none;
+    }
+    .single-layout {
+      height: clamp(270px, 38svh, 340px);
+      min-height: 270px;
+    }
+    .compare-layout {
+      height: clamp(360px, 50svh, 500px);
+      min-height: 360px;
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+      display: block;
+      pointer-events: none;
+      -webkit-touch-callout: none;
+    }
+    video::-webkit-media-controls {
+      display: none !important;
+      -webkit-appearance: none;
+    }
+    video::-webkit-media-controls-enclosure {
+      display: none !important;
+      -webkit-appearance: none;
+    }
+    video::-webkit-media-controls-panel {
+      display: none !important;
+      -webkit-appearance: none;
+    }
+    .stage-placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.8;
+      background:
+        radial-gradient(circle at center, rgba(120,164,255,0.16), transparent 28%),
+        linear-gradient(180deg, rgba(18,24,36,0.34), rgba(3,6,12,0.92));
+    }
+    .toolbar {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background:
+        linear-gradient(180deg, rgba(18, 31, 56, 0.9), rgba(8, 14, 26, 0.92));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 16px 34px rgba(0, 0, 0, 0.18);
+    }
+    .toolbar-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .toolbar button {
+      border: 0;
+      border-radius: 999px;
+      min-height: 36px;
+      padding: 8px 12px;
+      cursor: pointer;
+      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
+      color: var(--ink);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 8px 16px rgba(0, 0, 0, 0.12);
+    }
+    .speed-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: nowrap;
+      align-items: center;
+    }
+    .speed-row .speed-button {
+      flex: 1 1 0;
+      min-width: 0;
+      text-align: center;
+      letter-spacing: 0.02em;
+    }
+    .toolbar button.primary {
+      background: linear-gradient(180deg, #58a2ff, var(--accent));
+      color: #f4f8ff;
+      font-weight: 700;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        0 10px 22px rgba(47, 125, 246, 0.32);
+    }
+    .toolbar button.active {
+      outline: 2px solid rgba(154, 209, 255, 0.85);
+      background: linear-gradient(180deg, rgba(99,179,255,0.26), rgba(255,255,255,0.06));
+    }
+    .timeline-shell {
+      padding: 12px 12px 14px;
+      background:
+        linear-gradient(180deg, rgba(17, 30, 54, 0.94), rgba(5, 10, 20, 0.98)),
+        radial-gradient(circle at top, rgba(110, 166, 255, 0.12), transparent 42%);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 18px 44px rgba(0, 0, 0, 0.22);
+    }
+    .big-slider {
+      width: 100%;
+      height: 18px;
+      margin: 0 0 14px;
+      -webkit-appearance: none;
+      appearance: none;
+      background:
+        linear-gradient(90deg, rgba(122, 192, 255, 0.98) 0%, rgba(47, 125, 246, 0.98) var(--progress, 0%), rgba(255,255,255,0.12) var(--progress, 0%), rgba(255,255,255,0.12) 100%);
+      border-radius: 999px;
+      outline: none;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -1px 3px rgba(0, 0, 0, 0.28),
+        0 8px 22px rgba(0, 0, 0, 0.16);
+    }
+    .big-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, #ffffff 0%, #f9fbff 48%, #dfe9f8 100%);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.3),
+        0 2px 6px rgba(47, 125, 246, 0.22),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.08);
+      cursor: pointer;
+    }
+    .big-slider::-moz-range-thumb {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, #ffffff 0%, #f9fbff 48%, #dfe9f8 100%);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.3),
+        0 2px 6px rgba(47, 125, 246, 0.22),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.08);
+      cursor: pointer;
+    }
+    .tick-row {
+      display: grid;
+      grid-template-columns: repeat(20, 1fr);
+      gap: 6px;
+      align-items: end;
+      margin-bottom: 12px;
+      opacity: 0.72;
+    }
+    .tick-row span {
+      display: block;
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.12);
+    }
+    .tick-row span:nth-child(5n) {
+      height: 10px;
+      background: rgba(143, 196, 255, 0.65);
+    }
+    .bottom-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .transport {
+      display: flex;
+      gap: 8px;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .transport button, .share-actions button {
+      border: 0;
+      border-radius: 999px;
+      min-height: 44px;
+      padding: 10px 14px;
+      cursor: pointer;
+      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
+      color: var(--ink);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 10px 18px rgba(0, 0, 0, 0.14);
+    }
+    .transport button {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+    .transport button.primary {
+      background: linear-gradient(180deg, #79b7ff, var(--accent));
+      color: #f4f8ff;
+      font-weight: 700;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.16),
+        0 14px 28px rgba(47, 125, 246, 0.36);
+    }
+    .bottom-back {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 2px;
+    }
+    .bottom-back button {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      min-height: 42px;
+      min-width: 112px;
+      padding: 8px 18px;
+      cursor: pointer;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+      color: var(--ink);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.04),
+        0 10px 18px rgba(0, 0, 0, 0.14);
+    }
+    .share-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .status {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .compare-timelines {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .mini-timeline {
+      padding: 12px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 14px 26px rgba(0, 0, 0, 0.14);
+    }
+    .mini-timeline-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .mini-slider {
+      width: 100%;
+      height: 12px;
+      margin: 8px 0 10px;
+      -webkit-appearance: none;
+      appearance: none;
+      background:
+        linear-gradient(90deg, rgba(157, 214, 255, 0.98) 0%, rgba(99, 179, 255, 0.98) var(--progress, 0%), rgba(255,255,255,0.12) var(--progress, 0%), rgba(255,255,255,0.12) 100%);
+      border-radius: 999px;
+      outline: none;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+    }
+    .mini-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, #ffffff 0%, #f8fbff 48%, #dfe9f8 100%);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow:
+        0 8px 18px rgba(0, 0, 0, 0.28),
+        0 1px 4px rgba(99, 179, 255, 0.18);
+      cursor: pointer;
+    }
+    .mini-slider::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, #ffffff 0%, #f8fbff 48%, #dfe9f8 100%);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow:
+        0 8px 18px rgba(0, 0, 0, 0.28),
+        0 1px 4px rgba(99, 179, 255, 0.18);
+      cursor: pointer;
+    }
+    .mini-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .mini-actions button {
+      border: 0;
+      border-radius: 999px;
+      min-height: 34px;
+      padding: 6px 10px;
+      cursor: pointer;
+      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+      color: var(--ink);
+      transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+    .mini-actions button.active-set {
+      background: linear-gradient(180deg, #79b7ff, var(--accent));
+      color: #f4f8ff;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.14),
+        0 10px 22px rgba(47, 125, 246, 0.28);
+      font-weight: 700;
+    }
+    .start-tag {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .hidden {
+      display: none !important;
+    }
+    @media (max-width: 720px) {
+      .compare-timelines {
+        grid-template-columns: 1fr;
+      }
+      .mode-card h3 {
+        font-size: 26px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section id="splashScreen" class="screen active splash">
+    <div class="splash-card">
+      <h1>Smart Motion Analysis</h1>
+      <div class="tap-hint">画面をタップして開始</div>
+    </div>
+  </section>
+
+  <section id="homeScreen" class="screen">
+    <div class="shell home-shell">
+      <div class="mode-grid">
+        <div class="home-content">
+          <div class="mode-grid home-mode-grid">
+            <div class="mode-card" id="singleModeCard">
+              <div class="mode-card-badge">Mode One</div>
+              <h3>Single Analysis</h3>
+              <p>1本の動画を表示したい時に使用します。</p>
+              <div class="pickers">
+                <div class="picker-row">
+                  <input id="singleInput" type="file" accept="video/*" />
+                </div>
+                <button class="cta" id="openSingleButton">単体分析を開く</button>
+              </div>
+            </div>
+
+            <div class="mode-card" id="compareModeCard">
+              <div class="mode-card-badge">Mode Two</div>
+              <h3>Compare Analysis</h3>
+              <p>２本の動画を比較して表示する時に使用します。</p>
+              <div class="pickers">
+                <div class="picker-row">
+                  <input id="compareInput" type="file" accept="video/*" multiple />
+                </div>
+                <button class="cta secondary" id="openCompareButton">比較分析を開く</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="home-footer">
+          <button id="homeScreenButton">ホーム</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="analysisScreen" class="screen">
+    <div class="shell">
+      <div class="toolbar">
+        <div class="speed-row">
+          <button class="speed-button active" data-speed="1">1.0x</button>
+          <button class="speed-button" data-speed="0.5">0.5x</button>
+          <button class="speed-button" data-speed="0.25">0.25x</button>
+        </div>
+      </div>
+
+      <div id="singleLayout" class="video-stage single-layout">
+        <video id="singleVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
+        <div id="singlePlaceholder" class="stage-placeholder">動画が未選択です</div>
+      </div>
+
+      <div id="compareLayout" class="compare-layout hidden">
+        <div class="video-stage">
+          <video id="leftVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
+          <div id="leftPlaceholder" class="stage-placeholder">上動画が未選択です</div>
+        </div>
+        <div class="video-stage">
+          <video id="rightVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
+          <div id="rightPlaceholder" class="stage-placeholder">下動画が未選択です</div>
+        </div>
+      </div>
+
+      <div class="timeline-shell">
+        <input id="timelineSlider" class="big-slider" type="range" min="0" max="1000" value="0" />
+        <div id="compareTimelines" class="compare-timelines hidden">
+          <div class="mini-timeline">
+            <div class="mini-timeline-header">
+              <span>上動画</span>
+              <span id="leftTimeLabel">0.00 / 0.00</span>
+            </div>
+            <input id="leftSlider" class="mini-slider" type="range" min="0" max="1000" value="0" />
+            <div class="mini-actions">
+              <button id="setLeftStartButton">開始位置セット</button>
+              <span class="start-tag" id="leftStartLabel">開始位置: 0.00s</span>
+            </div>
+          </div>
+          <div class="mini-timeline">
+            <div class="mini-timeline-header">
+              <span>下動画</span>
+              <span id="rightTimeLabel">0.00 / 0.00</span>
+            </div>
+            <input id="rightSlider" class="mini-slider" type="range" min="0" max="1000" value="0" />
+            <div class="mini-actions">
+              <button id="setRightStartButton">開始位置セット</button>
+              <span class="start-tag" id="rightStartLabel">開始位置: 0.00s</span>
+            </div>
+          </div>
+        </div>
+        <div class="tick-row" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="bottom-actions">
+          <div class="transport">
+            <button id="stepBackButton">-1コマ</button>
+            <button class="primary" id="playButton">同時再生</button>
+            <button id="stepForwardButton">+1コマ</button>
+          </div>
+          <div class="bottom-back">
+            <button id="backButton">戻る</button>
+          </div>
+        </div>
+        <div class="status" id="statusText"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <script>
+    const splashScreen = document.getElementById("splashScreen");
+    const homeScreen = document.getElementById("homeScreen");
+    const analysisScreen = document.getElementById("analysisScreen");
+
+    const singleInput = document.getElementById("singleInput");
+    const compareInput = document.getElementById("compareInput");
+    const homeContent = document.querySelector(".home-content");
+    const singleModeCard = document.getElementById("singleModeCard");
+    const compareModeCard = document.getElementById("compareModeCard");
+    const openSingleButton = document.getElementById("openSingleButton");
+    const openCompareButton = document.getElementById("openCompareButton");
+    const homeScreenButton = document.getElementById("homeScreenButton");
+    const backButton = document.getElementById("backButton");
+
+    const statusText = document.getElementById("statusText");
+
+    const singleLayout = document.getElementById("singleLayout");
+    const compareLayout = document.getElementById("compareLayout");
+
+    const singleVideo = document.getElementById("singleVideo");
+    const leftVideo = document.getElementById("leftVideo");
+    const rightVideo = document.getElementById("rightVideo");
+
+    const singlePlaceholder = document.getElementById("singlePlaceholder");
+    const leftPlaceholder = document.getElementById("leftPlaceholder");
+    const rightPlaceholder = document.getElementById("rightPlaceholder");
+
+    const speedButtons = document.querySelectorAll(".speed-button");
+    const timelineSlider = document.getElementById("timelineSlider");
+    const compareTimelines = document.getElementById("compareTimelines");
+    const leftSlider = document.getElementById("leftSlider");
+    const rightSlider = document.getElementById("rightSlider");
+    const leftTimeLabel = document.getElementById("leftTimeLabel");
+    const rightTimeLabel = document.getElementById("rightTimeLabel");
+    const setLeftStartButton = document.getElementById("setLeftStartButton");
+    const setRightStartButton = document.getElementById("setRightStartButton");
+    const leftStartLabel = document.getElementById("leftStartLabel");
+    const rightStartLabel = document.getElementById("rightStartLabel");
+    const playButton = document.getElementById("playButton");
+    const stepBackButton = document.getElementById("stepBackButton");
+    const stepForwardButton = document.getElementById("stepForwardButton");
+
+    let currentMode = "single";
+    let currentSpeed = 1;
+    let compareStartLeft = 0;
+    let compareStartRight = 0;
+    let isPlaying = false;
+    let isRestartingCompareLoop = false;
+    let lastSplashActivationAt = 0;
+    let analysisEnterTimeout = null;
+
+    function showScreen(target) {
+      [splashScreen, homeScreen, analysisScreen].forEach((screen) => {
+        if (screen) screen.classList.toggle("active", screen === target);
+      });
+    }
+
+    function clearLaunchState() {
+      homeContent.classList.remove("is-launching");
+      [singleModeCard, compareModeCard].forEach((card) => card.classList.remove("launching"));
+    }
+
+    function triggerAnalysisEntrance() {
+      const shell = analysisScreen.querySelector(".shell");
+      shell.classList.remove("analysis-shell-enter");
+      void shell.offsetWidth;
+      shell.classList.add("analysis-shell-enter");
+      if (analysisEnterTimeout) clearTimeout(analysisEnterTimeout);
+      analysisEnterTimeout = setTimeout(() => {
+        shell.classList.remove("analysis-shell-enter");
+      }, 700);
+    }
+
+    function animateIntoAnalysis(card, onReady) {
+      const sourceScreen = homeScreen.classList.contains("active") ? homeScreen : splashScreen;
+      if (sourceScreen === homeScreen) {
+        homeContent.classList.add("is-launching");
+        if (card) card.classList.add("launching");
+      } else {
+        sourceScreen.classList.add("is-transitioning-out");
+      }
+
+      window.setTimeout(() => {
+        sourceScreen.classList.remove("is-transitioning-out");
+        clearLaunchState();
+        onReady();
+        showScreen(analysisScreen);
+        triggerAnalysisEntrance();
+      }, 260);
+    }
+
+    function moveToHomeScreen() {
+      splashScreen.classList.add("is-transitioning-out");
+      window.setTimeout(() => {
+        splashScreen.classList.remove("is-transitioning-out");
+        showScreen(homeScreen);
+      }, 220);
+    }
+
+    function activateFromSplash(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      const now = Date.now();
+      if (now - lastSplashActivationAt < 400) return;
+      if (!splashScreen.classList.contains("active")) return;
+      lastSplashActivationAt = now;
+      requestAnimationFrame(() => {
+        moveToHomeScreen();
+      });
+    }
+
+    function setStatus(message) {
+      statusText.textContent = message;
+    }
+
+    window.setNativeStatus = setStatus;
+
+    ["gesturestart", "gesturechange", "gestureend"].forEach((eventName) => {
+      document.addEventListener(eventName, (event) => {
+        event.preventDefault();
+      }, { passive: false });
+    });
+
+    splashScreen.addEventListener("click", activateFromSplash);
+    splashScreen.addEventListener("touchstart", activateFromSplash, { passive: false });
+
+    function activeVideos() {
+      return currentMode === "compare" ? [leftVideo, rightVideo] : [singleVideo];
+    }
+
+    function syncSliderFill() {
+      timelineSlider.style.setProperty("--progress", `${(Number(timelineSlider.value) / 10)}%`);
+    }
+
+    function syncMiniSliderFill(slider) {
+      slider.style.setProperty("--progress", `${(Number(slider.value) / 10)}%`);
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      const compare = mode === "compare";
+      singleLayout.classList.toggle("hidden", compare);
+      compareLayout.classList.toggle("hidden", !compare);
+      compareTimelines.classList.toggle("hidden", !compare);
+      timelineSlider.classList.toggle("hidden", compare);
+    }
+
+    function applySpeed(speed) {
+      currentSpeed = speed;
+      activeVideos().forEach((video) => {
+        video.playbackRate = speed;
+      });
+      speedButtons.forEach((button) => {
+        button.classList.toggle("active", Number(button.dataset.speed) === speed);
+      });
+    }
+
+    function setVideoSource(video, placeholder, file) {
+      if (!file) {
+        video.removeAttribute("src");
+        video.load();
+        placeholder.classList.remove("hidden");
+        return;
+      }
+      video.src = URL.createObjectURL(file);
+      placeholder.classList.add("hidden");
+    }
+
+    function currentReferenceVideo() {
+      return currentMode === "compare" ? leftVideo : singleVideo;
+    }
+
+    function updateTimelineFromVideo() {
+      if (currentMode === "compare") {
+        updateCompareTimelines();
+        return;
+      }
+      const ref = currentReferenceVideo();
+      const duration = ref.duration || 0;
+      const current = ref.currentTime || 0;
+      if (!duration) {
+        timelineSlider.value = 0;
+        syncSliderFill();
+        return;
+      }
+      timelineSlider.value = Math.round((current / duration) * 1000);
+      syncSliderFill();
+    }
+
+    function updateMiniTimeline(video, slider, label) {
+      const duration = video.duration || 0;
+      const current = video.currentTime || 0;
+      if (!duration) {
+        slider.value = 0;
+        syncMiniSliderFill(slider);
+        label.textContent = "0.00 / 0.00";
+        return;
+      }
+      slider.value = Math.round((current / duration) * 1000);
+      syncMiniSliderFill(slider);
+      label.textContent = `${current.toFixed(2)} / ${duration.toFixed(2)}`;
+    }
+
+    function updateCompareTimelines() {
+      updateMiniTimeline(leftVideo, leftSlider, leftTimeLabel);
+      updateMiniTimeline(rightVideo, rightSlider, rightTimeLabel);
+    }
+
+    function setStartButtonState(button, active) {
+      button.classList.toggle("active-set", active);
+      button.textContent = active ? "設定済み" : "開始位置セット";
+    }
+
+    function seekAll(ratio) {
+      activeVideos().forEach((video) => {
+        const duration = video.duration || 0;
+        if (!duration) return;
+        video.pause();
+        video.currentTime = duration * ratio;
+      });
+      updateTimelineFromVideo();
+    }
+
+    function seekVideo(video, slider, label, ratio) {
+      const duration = video.duration || 0;
+      if (!duration) return;
+      video.pause();
+      video.currentTime = duration * ratio;
+      updateMiniTimeline(video, slider, label);
+    }
+
+    function stepAll(delta) {
+      activeVideos().forEach((video) => {
+        const duration = video.duration || 0;
+        video.pause();
+        video.currentTime = Math.max(0, Math.min(duration, (video.currentTime || 0) + delta));
+      });
+      updateTimelineFromVideo();
+    }
+
+    async function playAll() {
+      const videos = activeVideos();
+      videos.forEach((video) => {
+        video.playbackRate = currentSpeed;
+        video.loop = currentMode === "single";
+      });
+
+      const results = await Promise.allSettled(
+        videos.map((video) => video.play())
+      );
+
+      const failed = results.some((result) => result.status === "rejected");
+      if (failed) {
+        isPlaying = false;
+        playButton.textContent = "同時再生";
+        setStatus("iPhoneでは比較再生時の音声制約があるため、動画をミュートして再生します。");
+        videos.forEach((video) => {
+          video.muted = true;
+          video.defaultMuted = true;
+        });
+
+        const retryResults = await Promise.allSettled(
+          videos.map((video) => video.play())
+        );
+        const retryFailed = retryResults.some((result) => result.status === "rejected");
+        if (retryFailed) {
+          setStatus("同時再生を開始できませんでした。動画を読み込み直してください。");
+          return false;
+        }
+      }
+
+      isPlaying = true;
+      playButton.textContent = "停止";
+      return true;
+    }
+
+    function pauseAll() {
+      activeVideos().forEach((video) => {
+        video.pause();
+        video.loop = false;
+      });
+      isPlaying = false;
+      isRestartingCompareLoop = false;
+      playButton.textContent = "同時再生";
+    }
+
+    async function restartCompareLoop() {
+      if (!isPlaying || currentMode !== "compare" || isRestartingCompareLoop) return;
+      isRestartingCompareLoop = true;
+      leftVideo.pause();
+      rightVideo.pause();
+      leftVideo.currentTime = compareStartLeft;
+      rightVideo.currentTime = compareStartRight;
+      await playAll();
+      isRestartingCompareLoop = false;
+    }
+
+    function openSingle() {
+      if (!singleInput.files[0]) {
+        setStatus("単体分析では動画を1本選んでください。");
+        return;
+      }
+      animateIntoAnalysis(singleModeCard, () => {
+        setMode("single");
+        singleVideo.muted = false;
+        singleVideo.defaultMuted = false;
+        setVideoSource(singleVideo, singlePlaceholder, singleInput.files[0]);
+        setStatus("単体分析を開きました。");
+        applySpeed(currentSpeed);
+        updateTimelineFromVideo();
+      });
+    }
+
+    function openCompare() {
+      const files = Array.from(compareInput.files || []);
+      if (files.length < 2) {
+        setStatus("比較分析では上下2本の動画が必要です。");
+        return;
+      }
+      animateIntoAnalysis(compareModeCard, () => {
+        setMode("compare");
+        isRestartingCompareLoop = false;
+        leftVideo.muted = true;
+        leftVideo.defaultMuted = true;
+        rightVideo.muted = true;
+        rightVideo.defaultMuted = true;
+        setVideoSource(leftVideo, leftPlaceholder, files[0]);
+        setVideoSource(rightVideo, rightPlaceholder, files[1]);
+        compareStartLeft = 0;
+        compareStartRight = 0;
+        leftStartLabel.textContent = "開始位置: 0.00s";
+        rightStartLabel.textContent = "開始位置: 0.00s";
+        setStartButtonState(setLeftStartButton, false);
+        setStartButtonState(setRightStartButton, false);
+        applySpeed(currentSpeed);
+        updateTimelineFromVideo();
+      });
+    }
+
+    openSingleButton.addEventListener("click", openSingle);
+    openCompareButton.addEventListener("click", openCompare);
+
+    backButton.addEventListener("click", () => {
+      pauseAll();
+      showScreen(homeScreen);
+    });
+
+    homeScreenButton.addEventListener("click", () => {
+      pauseAll();
+      showScreen(splashScreen);
+    });
+
+    speedButtons.forEach((button) => {
+      button.addEventListener("click", () => applySpeed(Number(button.dataset.speed)));
+    });
+
+    timelineSlider.addEventListener("input", (event) => {
+      syncSliderFill();
+      seekAll(Number(event.target.value) / 1000);
+    });
+
+    leftSlider.addEventListener("input", (event) => {
+      syncMiniSliderFill(leftSlider);
+      seekVideo(leftVideo, leftSlider, leftTimeLabel, Number(event.target.value) / 1000);
+    });
+
+    rightSlider.addEventListener("input", (event) => {
+      syncMiniSliderFill(rightSlider);
+      seekVideo(rightVideo, rightSlider, rightTimeLabel, Number(event.target.value) / 1000);
+    });
+
+    playButton.addEventListener("click", async () => {
+      if (isPlaying) {
+        pauseAll();
+        setStatus("再生を停止しました。");
+        return;
+      }
+      if (currentMode === "compare") {
+        leftVideo.currentTime = compareStartLeft;
+        rightVideo.currentTime = compareStartRight;
+        setStatus("設定した開始位置から同時再生します。");
+      } else {
+        setStatus("再生を開始しました。");
+      }
+      await playAll();
+    });
+    stepBackButton.addEventListener("click", () => stepAll(-1 / 30));
+    stepForwardButton.addEventListener("click", () => stepAll(1 / 30));
+
+    setLeftStartButton.addEventListener("click", () => {
+      compareStartLeft = leftVideo.currentTime || 0;
+      leftStartLabel.textContent = `開始位置: ${compareStartLeft.toFixed(2)}s`;
+      setStartButtonState(setLeftStartButton, true);
+      setStatus("上動画の開始位置を設定しました。");
+      updateCompareTimelines();
+    });
+
+    setRightStartButton.addEventListener("click", () => {
+      compareStartRight = rightVideo.currentTime || 0;
+      rightStartLabel.textContent = `開始位置: ${compareStartRight.toFixed(2)}s`;
+      setStartButtonState(setRightStartButton, true);
+      setStatus("下動画の開始位置を設定しました。");
+      updateCompareTimelines();
+    });
+
+    [singleVideo, leftVideo, rightVideo].forEach((video) => {
+      video.addEventListener("timeupdate", updateTimelineFromVideo);
+      video.addEventListener("loadedmetadata", updateTimelineFromVideo);
+    });
+
+    [leftVideo, rightVideo].forEach((video) => {
+      video.addEventListener("ended", () => {
+        if (currentMode !== "compare" || !isPlaying) return;
+        restartCompareLoop();
+      });
+    });
+
+    syncSliderFill();
+    syncMiniSliderFill(leftSlider);
+    syncMiniSliderFill(rightSlider);
+  </script>
+</body>
+</html>
