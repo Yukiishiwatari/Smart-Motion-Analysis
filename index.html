@@ -991,7 +991,7 @@
         <div id="compareTimelines" class="compare-timelines hidden">
           <div class="mini-timeline">
             <div class="mini-timeline-header">
-              <span>上動画</span>
+              <span id="leftLabel">上動画</span>
               <span id="leftTimeLabel">0.00 / 0.00</span>
             </div>
             <input id="leftSlider" class="mini-slider" type="range" min="0" max="1000" value="0" />
@@ -1002,7 +1002,7 @@
           </div>
           <div class="mini-timeline">
             <div class="mini-timeline-header">
-              <span>下動画</span>
+              <span id="rightLabel">下動画</span>
               <span id="rightTimeLabel">0.00 / 0.00</span>
             </div>
             <input id="rightSlider" class="mini-slider" type="range" min="0" max="1000" value="0" />
@@ -1649,7 +1649,7 @@
       compareStartLeft = leftVideo.currentTime || 0;
       leftStartLabel.textContent = `開始位置: ${compareStartLeft.toFixed(2)}s`;
       setStartButtonState(setLeftStartButton, true);
-      setStatus("上動画の開始位置を設定しました。");
+      setStatus(`${compareSlotName("left")}の開始位置を設定しました。`);
       updateCompareTimelines();
     });
 
@@ -1657,7 +1657,7 @@
       compareStartRight = rightVideo.currentTime || 0;
       rightStartLabel.textContent = `開始位置: ${compareStartRight.toFixed(2)}s`;
       setStartButtonState(setRightStartButton, true);
-      setStatus("下動画の開始位置を設定しました。");
+      setStatus(`${compareSlotName("right")}の開始位置を設定しました。`);
       updateCompareTimelines();
     });
 
