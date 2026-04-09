@@ -847,6 +847,9 @@
       font-size: 12px;
       color: var(--muted);
     }
+    .mini-timeline-header .time-only {
+      margin-left: auto;
+    }
     .mini-slider {
       width: 100%;
       height: 12px;
@@ -997,11 +1000,11 @@
       <div id="compareLayout" class="compare-layout hidden">
         <div id="leftStage" class="video-stage">
           <video id="leftVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
-          <div id="leftPlaceholder" class="stage-placeholder">上動画が未選択です</div>
+          <div id="leftPlaceholder" class="stage-placeholder">動画が未選択です</div>
         </div>
         <div id="rightStage" class="video-stage">
           <video id="rightVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
-          <div id="rightPlaceholder" class="stage-placeholder">下動画が未選択です</div>
+          <div id="rightPlaceholder" class="stage-placeholder">動画が未選択です</div>
         </div>
       </div>
 
@@ -1010,8 +1013,7 @@
         <div id="compareTimelines" class="compare-timelines hidden">
           <div class="mini-timeline">
             <div class="mini-timeline-header">
-              <span id="leftLabel">上動画</span>
-              <span id="leftTimeLabel">0.00 / 0.00</span>
+              <span id="leftTimeLabel" class="time-only">0.00 / 0.00</span>
             </div>
             <input id="leftSlider" class="mini-slider" type="range" min="0" max="1000" value="0" />
             <div class="mini-actions">
@@ -1021,8 +1023,7 @@
           </div>
           <div class="mini-timeline">
             <div class="mini-timeline-header">
-              <span id="rightLabel">下動画</span>
-              <span id="rightTimeLabel">0.00 / 0.00</span>
+              <span id="rightTimeLabel" class="time-only">0.00 / 0.00</span>
             </div>
             <input id="rightSlider" class="mini-slider" type="range" min="0" max="1000" value="0" />
             <div class="mini-actions">
@@ -1091,8 +1092,6 @@
     const compareTimelines = document.getElementById("compareTimelines");
     const leftSlider = document.getElementById("leftSlider");
     const rightSlider = document.getElementById("rightSlider");
-    const leftLabel = document.getElementById("leftLabel");
-    const rightLabel = document.getElementById("rightLabel");
     const leftTimeLabel = document.getElementById("leftTimeLabel");
     const rightTimeLabel = document.getElementById("rightTimeLabel");
     const setLeftStartButton = document.getElementById("setLeftStartButton");
@@ -1378,17 +1377,8 @@
       compareLayout.classList.toggle("layout-horizontal", mode !== "vertical");
       horizontalLayoutButton.classList.toggle("active", mode === "horizontal");
       verticalLayoutButton.classList.toggle("active", mode === "vertical");
-      leftLabel.textContent = mode === "vertical" ? "左動画" : "上動画";
-      rightLabel.textContent = mode === "vertical" ? "右動画" : "下動画";
-      leftPlaceholder.textContent = mode === "vertical" ? "左動画が未選択です" : "上動画が未選択です";
-      rightPlaceholder.textContent = mode === "vertical" ? "右動画が未選択です" : "下動画が未選択です";
-    }
-
-    function compareSlotName(side) {
-      if (compareLayoutMode === "vertical") {
-        return side === "left" ? "左動画" : "右動画";
-      }
-      return side === "left" ? "上動画" : "下動画";
+      leftPlaceholder.textContent = "動画が未選択です";
+      rightPlaceholder.textContent = "動画が未選択です";
     }
 
     function pickCompareLayoutMode() {
@@ -1706,7 +1696,7 @@
       compareStartLeft = leftVideo.currentTime || 0;
       leftStartLabel.textContent = `開始位置: ${compareStartLeft.toFixed(2)}s`;
       setStartButtonState(setLeftStartButton, true);
-      setStatus(`${compareSlotName("left")}の開始位置を設定しました。`);
+      setStatus("開始位置を設定しました。");
       updateCompareTimelines();
     });
 
@@ -1714,7 +1704,7 @@
       compareStartRight = rightVideo.currentTime || 0;
       rightStartLabel.textContent = `開始位置: ${compareStartRight.toFixed(2)}s`;
       setStartButtonState(setRightStartButton, true);
-      setStatus(`${compareSlotName("right")}の開始位置を設定しました。`);
+      setStatus("開始位置を設定しました。");
       updateCompareTimelines();
     });
 
