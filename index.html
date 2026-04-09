@@ -1352,17 +1352,26 @@
     }
 
     function pickCompareLayoutMode() {
-      const leftWidth = leftVideo.videoWidth || 0;
-      const leftHeight = leftVideo.videoHeight || 0;
-      const rightWidth = rightVideo.videoWidth || 0;
-      const rightHeight = rightVideo.videoHeight || 0;
-      if (!leftWidth || !leftHeight || !rightWidth || !rightHeight) return;
+      if (currentMode !== "compare") return;
+      const aspectRatios = [
+        [leftVideo.videoWidth || 0, leftVideo.videoHeight || 0],
+        [rightVideo.videoWidth || 0, rightVideo.videoHeight || 0]
+      ]
+        .filter(([width, height]) => width > 0 && height > 0)
+        .map(([width, height]) => width / height);
 
-      const leftAspect = leftWidth / leftHeight;
-      const rightAspect = rightWidth / rightHeight;
-      const averageAspect = (leftAspect + rightAspect) / 2;
+      if (!aspectRatios.length) return;
+
+      const averageAspect = aspectRatios.reduce((sum, ratio) => sum + ratio, 0) / aspectRatios.length;
       const nextMode = averageAspect < 1 ? "vertical" : "horizontal";
       setCompareLayoutMode(nextMode);
+    }
+
+    function scheduleCompareLayoutRefresh() {
+      window.requestAnimationFrame(() => {
+        pickCompareLayoutMode();
+        window.setTimeout(pickCompareLayoutMode, 120);
+      });
     }
 
     function applySpeed(speed) {
@@ -1560,6 +1569,7 @@
         rightVideo.defaultMuted = true;
         setVideoSource(leftVideo, leftPlaceholder, files[0]);
         setVideoSource(rightVideo, rightPlaceholder, files[1]);
+        scheduleCompareLayoutRefresh();
         compareStartLeft = 0;
         compareStartRight = 0;
         leftStartLabel.textContent = "開始位置: 0.00s";
@@ -1643,7 +1653,12 @@
       video.addEventListener("loadedmetadata", updateTimelineFromVideo);
       video.addEventListener("loadedmetadata", () => {
         if (video === leftVideo || video === rightVideo) {
-          pickCompareLayoutMode();
+          scheduleCompareLayoutRefresh();
+        }
+      });
+      video.addEventListener("loadeddata", () => {
+        if (video === leftVideo || video === rightVideo) {
+          scheduleCompareLayoutRefresh();
         }
       });
       video.addEventListener("error", () => {
