@@ -651,6 +651,21 @@
       flex-wrap: nowrap;
       align-items: center;
     }
+    .layout-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: nowrap;
+      align-items: center;
+    }
+    .layout-row.hidden {
+      display: none;
+    }
+    .layout-row .layout-button {
+      flex: 1 1 0;
+      min-width: 0;
+      text-align: center;
+      letter-spacing: 0.02em;
+    }
     .speed-row .speed-button {
       flex: 1 1 0;
       min-width: 0;
@@ -968,6 +983,10 @@
           <button class="speed-button" data-speed="0.5">0.5x</button>
           <button class="speed-button" data-speed="0.25">0.25x</button>
         </div>
+        <div id="layoutRow" class="layout-row hidden">
+          <button id="horizontalLayoutButton" class="layout-button active" type="button">上下表示</button>
+          <button id="verticalLayoutButton" class="layout-button" type="button">左右表示</button>
+        </div>
       </div>
 
       <div id="singleLayout" class="video-stage single-layout">
@@ -1065,6 +1084,9 @@
     const rightPlaceholder = document.getElementById("rightPlaceholder");
 
     const speedButtons = document.querySelectorAll(".speed-button");
+    const layoutRow = document.getElementById("layoutRow");
+    const horizontalLayoutButton = document.getElementById("horizontalLayoutButton");
+    const verticalLayoutButton = document.getElementById("verticalLayoutButton");
     const timelineSlider = document.getElementById("timelineSlider");
     const compareTimelines = document.getElementById("compareTimelines");
     const leftSlider = document.getElementById("leftSlider");
@@ -1093,6 +1115,7 @@
     const objectUrls = new WeakMap();
     const zoomStates = new WeakMap();
     let compareLayoutMode = "horizontal";
+    let compareLayoutManualOverride = false;
 
     function showScreen(target) {
       [splashScreen, homeScreen, analysisScreen].forEach((screen) => {
@@ -1346,12 +1369,15 @@
       compareLayout.classList.toggle("hidden", !compare);
       compareTimelines.classList.toggle("hidden", !compare);
       timelineSlider.classList.toggle("hidden", compare);
+      layoutRow.classList.toggle("hidden", !compare);
     }
 
     function setCompareLayoutMode(mode) {
       compareLayoutMode = mode;
       compareLayout.classList.toggle("layout-vertical", mode === "vertical");
       compareLayout.classList.toggle("layout-horizontal", mode !== "vertical");
+      horizontalLayoutButton.classList.toggle("active", mode === "horizontal");
+      verticalLayoutButton.classList.toggle("active", mode === "vertical");
       leftLabel.textContent = mode === "vertical" ? "左動画" : "上動画";
       rightLabel.textContent = mode === "vertical" ? "右動画" : "下動画";
       leftPlaceholder.textContent = mode === "vertical" ? "左動画が未選択です" : "上動画が未選択です";
@@ -1367,6 +1393,7 @@
 
     function pickCompareLayoutMode() {
       if (currentMode !== "compare") return;
+      if (compareLayoutManualOverride) return;
       const aspectRatios = [
         [leftVideo.videoWidth || 0, leftVideo.videoHeight || 0],
         [rightVideo.videoWidth || 0, rightVideo.videoHeight || 0]
@@ -1591,6 +1618,7 @@
       }
       animateIntoAnalysis(compareModeCard, () => {
         setMode("compare");
+        compareLayoutManualOverride = false;
         setCompareLayoutMode("horizontal");
         isRestartingCompareLoop = false;
         leftVideo.muted = true;
@@ -1627,6 +1655,18 @@
 
     speedButtons.forEach((button) => {
       button.addEventListener("click", () => applySpeed(Number(button.dataset.speed)));
+    });
+
+    horizontalLayoutButton.addEventListener("click", () => {
+      compareLayoutManualOverride = true;
+      setCompareLayoutMode("horizontal");
+      setStatus("比較表示を上下レイアウトに切り替えました。");
+    });
+
+    verticalLayoutButton.addEventListener("click", () => {
+      compareLayoutManualOverride = true;
+      setCompareLayoutMode("vertical");
+      setStatus("比較表示を左右レイアウトに切り替えました。");
     });
 
     timelineSlider.addEventListener("input", (event) => {
