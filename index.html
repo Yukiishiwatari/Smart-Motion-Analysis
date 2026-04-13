@@ -1493,6 +1493,31 @@
       button.textContent = active ? "設定済み" : "開始位置セット";
     }
 
+    function toggleCompareStart(button, video, label, side) {
+      const isActive = button.classList.contains("active-set");
+      if (isActive) {
+        if (side === "left") {
+          compareStartLeft = 0;
+        } else {
+          compareStartRight = 0;
+        }
+        label.textContent = "開始位置: 0.00s";
+        setStartButtonState(button, false);
+        setStatus("開始位置の設定を解除しました。");
+        return;
+      }
+
+      const nextStart = video.currentTime || 0;
+      if (side === "left") {
+        compareStartLeft = nextStart;
+      } else {
+        compareStartRight = nextStart;
+      }
+      label.textContent = `開始位置: ${nextStart.toFixed(2)}s`;
+      setStartButtonState(button, true);
+      setStatus("開始位置を設定しました。");
+    }
+
     function seekAll(ratio) {
       activeVideos().forEach((video) => {
         const duration = video.duration || 0;
@@ -1566,6 +1591,44 @@
       playButton.textContent = "同時再生";
     }
 
+    function resetAnalysisState() {
+      pauseAll();
+      if (compareLayoutRefreshTimeout) {
+        window.clearTimeout(compareLayoutRefreshTimeout);
+        compareLayoutRefreshTimeout = null;
+      }
+
+      [singleVideo, leftVideo, rightVideo].forEach((video) => {
+        video.currentTime = 0;
+      });
+      setVideoSource(singleVideo, singlePlaceholder, null);
+      setVideoSource(leftVideo, leftPlaceholder, null);
+      setVideoSource(rightVideo, rightPlaceholder, null);
+
+      singleInput.value = "";
+      compareInput.value = "";
+      compareLayoutManualOverride = false;
+      setMode("single");
+      setCompareLayoutMode("horizontal");
+      applySpeed(1);
+
+      compareStartLeft = 0;
+      compareStartRight = 0;
+      leftStartLabel.textContent = "開始位置: 0.00s";
+      rightStartLabel.textContent = "開始位置: 0.00s";
+      setStartButtonState(setLeftStartButton, false);
+      setStartButtonState(setRightStartButton, false);
+      leftTimeLabel.textContent = "0.00 / 0.00";
+      rightTimeLabel.textContent = "0.00 / 0.00";
+      timelineSlider.value = 0;
+      leftSlider.value = 0;
+      rightSlider.value = 0;
+      syncSliderFill();
+      syncMiniSliderFill(leftSlider);
+      syncMiniSliderFill(rightSlider);
+      setStatus("");
+    }
+
     async function restartCompareLoop() {
       if (!isPlaying || currentMode !== "compare" || isRestartingCompareLoop) return;
       isRestartingCompareLoop = true;
@@ -1634,12 +1697,12 @@
     openCompareButton.addEventListener("click", openCompare);
 
     backButton.addEventListener("click", () => {
-      pauseAll();
+      resetAnalysisState();
       showScreen(homeScreen);
     });
 
     homeScreenButton.addEventListener("click", () => {
-      pauseAll();
+      resetAnalysisState();
       showScreen(splashScreen);
     });
 
@@ -1693,18 +1756,12 @@
     stepForwardButton.addEventListener("click", () => stepAll(1 / 30));
 
     setLeftStartButton.addEventListener("click", () => {
-      compareStartLeft = leftVideo.currentTime || 0;
-      leftStartLabel.textContent = `開始位置: ${compareStartLeft.toFixed(2)}s`;
-      setStartButtonState(setLeftStartButton, true);
-      setStatus("開始位置を設定しました。");
+      toggleCompareStart(setLeftStartButton, leftVideo, leftStartLabel, "left");
       updateCompareTimelines();
     });
 
     setRightStartButton.addEventListener("click", () => {
-      compareStartRight = rightVideo.currentTime || 0;
-      rightStartLabel.textContent = `開始位置: ${compareStartRight.toFixed(2)}s`;
-      setStartButtonState(setRightStartButton, true);
-      setStatus("開始位置を設定しました。");
+      toggleCompareStart(setRightStartButton, rightVideo, rightStartLabel, "right");
       updateCompareTimelines();
     });
 
