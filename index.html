@@ -766,6 +766,62 @@
       touch-action: none;
       user-select: none;
     }
+    .video-stage.annotation-active {
+      cursor: crosshair;
+    }
+    .annotation-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .annotation-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+    }
+    .annotation-path {
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.35));
+    }
+    .annotation-path.preview {
+      stroke-dasharray: 8 6;
+      opacity: 0.9;
+    }
+    .annotation-note {
+      position: absolute;
+      max-width: min(72%, 220px);
+      padding: 8px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 216, 77, 0.34);
+      background: rgba(7, 14, 25, 0.88);
+      color: #fff6bf;
+      font-size: 12px;
+      line-height: 1.5;
+      letter-spacing: 0.01em;
+      box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      white-space: pre-wrap;
+    }
+    .annotation-note::before {
+      content: "";
+      position: absolute;
+      top: -7px;
+      left: 14px;
+      width: 12px;
+      height: 12px;
+      transform: rotate(45deg);
+      background: rgba(7, 14, 25, 0.88);
+      border-left: 1px solid rgba(255, 216, 77, 0.34);
+      border-top: 1px solid rgba(255, 216, 77, 0.34);
+    }
     .single-layout {
       height: clamp(270px, 38svh, 340px);
       min-height: 270px;
@@ -993,8 +1049,7 @@
     }
     .transport button, .share-actions button {
       border: 0;
-      border-radius: 999px;
-      min-height: 44px;
+      min-height: 46px;
       padding: 10px 14px;
       cursor: pointer;
       background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
@@ -1006,8 +1061,29 @@
     .transport button {
       flex: 1 1 0;
       min-width: 0;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
     }
-    .transport button.primary {
+    .transport button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+    .transport button:active {
+      transform: translateY(0) scale(0.985);
+    }
+    .transport .frame-button {
+      flex: 0.9 1 0;
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05)),
+        linear-gradient(135deg, rgba(154, 209, 255, 0.1), transparent 60%);
+      border: 1px solid rgba(120, 164, 255, 0.14);
+    }
+    .transport .play-button {
+      flex: 1.2 1 0;
+      border-radius: 999px;
+      min-height: 52px;
       background: linear-gradient(180deg, #79b7ff, var(--accent));
       color: #f4f8ff;
       font-weight: 700;
@@ -1017,22 +1093,116 @@
     }
     .bottom-back {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
       padding-top: 2px;
     }
     .bottom-back button {
-      flex: 0 0 auto;
+      flex: 1 1 0;
       border: 1px solid var(--line);
       border-radius: 999px;
       min-height: 42px;
-      min-width: 112px;
-      padding: 8px 18px;
+      min-width: 0;
+      padding: 8px 12px;
       cursor: pointer;
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
       color: var(--ink);
       box-shadow:
         inset 0 1px 0 rgba(255,255,255,0.04),
         0 10px 18px rgba(0, 0, 0, 0.14);
+      text-align: center;
+      white-space: nowrap;
+    }
+    .bottom-back button.back-button {
+      flex: 0 0 100%;
+      margin-top: 4px;
+      min-height: 48px;
+      border-radius: 20px;
+      border-color: rgba(120, 164, 255, 0.22);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05)),
+        linear-gradient(135deg, rgba(154, 209, 255, 0.12), transparent 64%);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.06),
+        0 14px 24px rgba(0, 0, 0, 0.16);
+    }
+    .bottom-back button.danger {
+      border-color: rgba(255, 111, 97, 0.2);
+      background: linear-gradient(180deg, rgba(255, 111, 97, 0.18), rgba(255, 69, 58, 0.12));
+      color: #ffd7d1;
+    }
+    .bottom-back button.mode-active {
+      outline: 2px solid rgba(154, 209, 255, 0.85);
+      background: linear-gradient(180deg, rgba(99,179,255,0.26), rgba(255,255,255,0.06));
+    }
+    .comment-panel {
+      display: grid;
+      gap: 8px;
+      margin-top: 4px;
+      padding: 12px;
+      border: 1px solid rgba(120, 164, 255, 0.16);
+      border-radius: 20px;
+      background: rgba(10, 18, 34, 0.52);
+    }
+    .comment-panel textarea {
+      width: 100%;
+      min-height: 92px;
+      resize: vertical;
+      border: 1px solid rgba(120, 164, 255, 0.16);
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: rgba(4, 10, 20, 0.66);
+      color: var(--ink);
+      line-height: 1.6;
+    }
+    .comment-panel textarea:focus {
+      outline: 2px solid rgba(154, 209, 255, 0.58);
+      border-color: rgba(154, 209, 255, 0.36);
+    }
+    .comment-panel .comment-hint {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .point-panel {
+      display: grid;
+      gap: 10px;
+      margin-top: 4px;
+      padding: 12px;
+      border: 1px solid rgba(120, 164, 255, 0.16);
+      border-radius: 20px;
+      background: rgba(10, 18, 34, 0.52);
+    }
+    .point-panel-row {
+      display: grid;
+      grid-template-columns: 86px 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .point-panel label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .point-panel input[type="color"] {
+      width: 100%;
+      min-width: 0;
+      height: 42px;
+      border: 1px solid rgba(120, 164, 255, 0.16);
+      border-radius: 12px;
+      background: rgba(4, 10, 20, 0.66);
+      padding: 4px;
+    }
+    .point-panel input[type="range"] {
+      width: 100%;
+    }
+    .point-value {
+      min-width: 42px;
+      text-align: right;
+      font-size: 13px;
+      color: var(--ink);
     }
     .share-actions {
       display: flex;
@@ -1224,16 +1394,25 @@
 
       <div id="singleLayout" class="video-stage single-layout">
         <video id="singleVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
+        <div class="annotation-layer" data-stage="single">
+          <svg class="annotation-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        </div>
         <div id="singlePlaceholder" class="stage-placeholder">動画が未選択です</div>
       </div>
 
       <div id="compareLayout" class="compare-layout hidden">
         <div id="leftStage" class="video-stage">
           <video id="leftVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
+          <div class="annotation-layer" data-stage="left">
+            <svg class="annotation-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+          </div>
           <div id="leftPlaceholder" class="stage-placeholder">動画が未選択です</div>
         </div>
         <div id="rightStage" class="video-stage">
           <video id="rightVideo" playsinline webkit-playsinline disablepictureinpicture disableremoteplayback></video>
+          <div class="annotation-layer" data-stage="right">
+            <svg class="annotation-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+          </div>
           <div id="rightPlaceholder" class="stage-placeholder">動画が未選択です</div>
         </div>
       </div>
@@ -1270,12 +1449,30 @@
         </div>
         <div class="bottom-actions">
           <div class="transport">
-            <button id="stepBackButton">-1コマ</button>
-            <button class="primary" id="playButton">同時再生</button>
-            <button id="stepForwardButton">+1コマ</button>
+            <button id="stepBackButton" class="frame-button">-1コマ</button>
+            <button class="primary play-button" id="playButton">同時再生</button>
+            <button id="stepForwardButton" class="frame-button">+1コマ</button>
+          </div>
+          <div id="commentPanel" class="comment-panel hidden">
+            <textarea id="commentInput" placeholder="コメントを入力してから、動画上の置きたい位置をタップしてください。"></textarea>
+          </div>
+          <div id="pointPanel" class="point-panel hidden">
+            <div class="point-panel-row">
+              <label for="pointColorInput">線の色</label>
+              <input id="pointColorInput" type="color" value="#ffd84d" />
+              <span id="pointColorLabel" class="point-value">黄</span>
+            </div>
+            <div class="point-panel-row">
+              <label for="pointSizeInput">線の太さ</label>
+              <input id="pointSizeInput" type="range" min="2" max="12" step="1" value="3" />
+              <span id="pointSizeLabel" class="point-value">3px</span>
+            </div>
           </div>
           <div class="bottom-back">
-            <button id="backButton">戻る</button>
+            <button id="annotationCommentButton" type="button">コメント</button>
+            <button id="annotationPointButton" type="button">ポイント</button>
+            <button id="clearAnnotationsButton" class="danger" type="button">クリア</button>
+            <button id="backButton" class="back-button">戻る</button>
           </div>
         </div>
         <div class="status" id="statusText"></div>
@@ -1331,6 +1528,16 @@
     const playButton = document.getElementById("playButton");
     const stepBackButton = document.getElementById("stepBackButton");
     const stepForwardButton = document.getElementById("stepForwardButton");
+    const annotationCommentButton = document.getElementById("annotationCommentButton");
+    const annotationPointButton = document.getElementById("annotationPointButton");
+    const clearAnnotationsButton = document.getElementById("clearAnnotationsButton");
+    const commentPanel = document.getElementById("commentPanel");
+    const commentInput = document.getElementById("commentInput");
+    const pointPanel = document.getElementById("pointPanel");
+    const pointColorInput = document.getElementById("pointColorInput");
+    const pointColorLabel = document.getElementById("pointColorLabel");
+    const pointSizeInput = document.getElementById("pointSizeInput");
+    const pointSizeLabel = document.getElementById("pointSizeLabel");
 
     let currentMode = "single";
     let currentSpeed = 1;
@@ -1343,8 +1550,141 @@
     let compareLayoutRefreshTimeout = null;
     const objectUrls = new WeakMap();
     const zoomStates = new WeakMap();
+    const annotationStates = new WeakMap();
     let compareLayoutMode = "horizontal";
     let compareLayoutManualOverride = false;
+    let annotationMode = "none";
+    let pointStrokeColor = pointColorInput.value;
+    let pointStrokeWidth = Number(pointSizeInput.value);
+
+    function clampPercent(value) {
+      return Math.max(0, Math.min(100, value));
+    }
+
+    function getAnnotationElements(stage) {
+      const layer = stage.querySelector(".annotation-layer");
+      const svg = layer ? layer.querySelector(".annotation-svg") : null;
+      return { layer, svg };
+    }
+
+    function getStagePoint(stage, clientX, clientY) {
+      const rect = stage.getBoundingClientRect();
+      if (!rect.width || !rect.height) return null;
+      return {
+        x: clampPercent(((clientX - rect.left) / rect.width) * 100),
+        y: clampPercent(((clientY - rect.top) / rect.height) * 100)
+      };
+    }
+
+    function buildSmoothPath(points) {
+      if (!points.length) return "";
+      if (points.length === 1) {
+        return `M ${points[0].x} ${points[0].y}`;
+      }
+      let path = `M ${points[0].x} ${points[0].y}`;
+      for (let index = 1; index < points.length - 1; index += 1) {
+        const current = points[index];
+        const next = points[index + 1];
+        const midX = (current.x + next.x) / 2;
+        const midY = (current.y + next.y) / 2;
+        path += ` Q ${current.x} ${current.y} ${midX} ${midY}`;
+      }
+      const penultimate = points[points.length - 2];
+      const last = points[points.length - 1];
+      path += ` Q ${penultimate.x} ${penultimate.y} ${last.x} ${last.y}`;
+      return path;
+    }
+
+    function getColorName(hex) {
+      const normalized = hex.toLowerCase();
+      if (normalized === "#ffd84d") return "黄";
+      if (normalized === "#ff5f57") return "赤";
+      if (normalized === "#63b3ff") return "青";
+      if (normalized === "#4cd964") return "緑";
+      return hex.toUpperCase();
+    }
+
+    function syncPointControls() {
+      pointColorLabel.textContent = getColorName(pointStrokeColor);
+      pointSizeLabel.textContent = `${pointStrokeWidth}px`;
+    }
+
+    function addAnnotationPath(stage, points, options = {}) {
+      const { svg } = getAnnotationElements(stage);
+      if (!svg) return null;
+      const { isPreview = false, color = pointStrokeColor, width = pointStrokeWidth } = options;
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", buildSmoothPath(points));
+      path.setAttribute("stroke", color);
+      path.setAttribute("stroke-width", String(width));
+      path.classList.add("annotation-path");
+      if (isPreview) path.classList.add("preview");
+      svg.appendChild(path);
+      return path;
+    }
+
+    function addAnnotationNote(stage, point, text) {
+      const { layer } = getAnnotationElements(stage);
+      if (!layer) return null;
+      const note = document.createElement("button");
+      note.type = "button";
+      note.className = "annotation-note";
+      note.style.left = `${point.x}%`;
+      note.style.top = `${point.y}%`;
+      note.textContent = text;
+      note.title = "タップで編集 / 空欄で削除";
+      note.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const nextText = window.prompt("コメントを編集してください。空欄で削除できます。", note.textContent || "");
+        if (nextText === null) return;
+        const trimmed = nextText.trim();
+        if (!trimmed) {
+          note.remove();
+          setStatus("コメントを削除しました。");
+          return;
+        }
+        note.textContent = trimmed;
+        setStatus("コメントを更新しました。");
+      });
+      layer.appendChild(note);
+      return note;
+    }
+
+    function clearAnnotationsForStage(stage) {
+      const { svg, layer } = getAnnotationElements(stage);
+      if (svg) svg.replaceChildren();
+      if (layer) {
+        Array.from(layer.querySelectorAll(".annotation-note")).forEach((note) => note.remove());
+      }
+    }
+
+    function visibleStages() {
+      return currentMode === "compare" ? [leftStage, rightStage] : [singleLayout];
+    }
+
+    function setAnnotationMode(mode, { force = false } = {}) {
+      const nextMode = force ? mode : (annotationMode === mode ? "none" : mode);
+      annotationMode = nextMode;
+      annotationCommentButton.classList.toggle("mode-active", nextMode === "comment");
+      annotationPointButton.classList.toggle("mode-active", nextMode === "point");
+      commentPanel.classList.toggle("hidden", nextMode !== "comment");
+      pointPanel.classList.toggle("hidden", nextMode !== "point");
+      [singleLayout, leftStage, rightStage].forEach((stage) => {
+        stage.classList.remove("annotation-active");
+      });
+      visibleStages().forEach((stage) => {
+        stage.classList.toggle("annotation-active", nextMode !== "none");
+      });
+      if (nextMode === "comment") {
+        commentInput.focus();
+        setStatus("動画をタップして、コメントを追加してください。");
+      } else if (nextMode === "point") {
+        syncPointControls();
+        setStatus("ポイントモードです。動画上をなぞると線を引けます。");
+      } else {
+        setStatus("通常操作に戻しました。");
+      }
+    }
 
     function showScreen(target) {
       [splashScreen, homeScreen, analysisScreen].forEach((screen) => {
@@ -1513,6 +1853,7 @@
       zoomStates.set(stage, state);
 
       stage.addEventListener("touchstart", (event) => {
+        if (annotationMode !== "none") return;
         if (event.touches.length === 2) {
           event.preventDefault();
           state.isPinching = true;
@@ -1531,6 +1872,7 @@
       }, { passive: false });
 
       stage.addEventListener("touchmove", (event) => {
+        if (annotationMode !== "none") return;
         if (event.touches.length === 2) {
           event.preventDefault();
           const nextDistance = getDistance(event.touches[0], event.touches[1]);
@@ -1551,6 +1893,7 @@
       }, { passive: false });
 
       stage.addEventListener("touchend", (event) => {
+        if (annotationMode !== "none") return;
         if (event.touches.length < 2) {
           state.isPinching = false;
           state.pinchDistance = 0;
@@ -1565,6 +1908,7 @@
       });
 
       stage.addEventListener("touchcancel", () => {
+        if (annotationMode !== "none") return;
         if (state.scale <= 1.01) {
           resetZoom(stage, video);
           return;
@@ -1574,8 +1918,101 @@
       });
 
       stage.addEventListener("dblclick", () => {
+        if (annotationMode !== "none") return;
         resetZoom(stage, video);
         setStatus("拡大表示をリセットしました。");
+      });
+    }
+
+    function setupAnnotations(stage) {
+      const state = {
+        pointerId: null,
+        points: [],
+        previewPath: null,
+        dragged: false,
+        color: pointStrokeColor,
+        width: pointStrokeWidth
+      };
+      annotationStates.set(stage, state);
+
+      stage.addEventListener("pointerdown", (event) => {
+        if (annotationMode !== "point") return;
+        if (event.pointerType === "touch" && event.isPrimary === false) return;
+        const point = getStagePoint(stage, event.clientX, event.clientY);
+        if (!point) return;
+        state.pointerId = event.pointerId;
+        state.points = [point];
+        state.dragged = false;
+        state.color = pointStrokeColor;
+        state.width = pointStrokeWidth;
+        if (state.previewPath) state.previewPath.remove();
+        state.previewPath = addAnnotationPath(stage, state.points, {
+          isPreview: true,
+          color: state.color,
+          width: state.width
+        });
+        stage.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      });
+
+      stage.addEventListener("pointermove", (event) => {
+        if (annotationMode !== "point") return;
+        if (state.pointerId !== event.pointerId || !state.points.length || !state.previewPath) return;
+        const point = getStagePoint(stage, event.clientX, event.clientY);
+        if (!point) return;
+        const previous = state.points[state.points.length - 1];
+        const moved = Math.hypot(point.x - previous.x, point.y - previous.y);
+        if (moved < 0.35) return;
+        state.points.push(point);
+        state.previewPath.setAttribute("d", buildSmoothPath(state.points));
+        if (state.points.length > 2) state.dragged = true;
+        event.preventDefault();
+      });
+
+      function finishPath(event) {
+        if (state.pointerId !== event.pointerId) return;
+        if (stage.hasPointerCapture(event.pointerId)) {
+          stage.releasePointerCapture(event.pointerId);
+        }
+        if (state.previewPath) state.previewPath.remove();
+        if (state.dragged && state.points.length > 1) {
+          addAnnotationPath(stage, state.points, {
+            color: state.color,
+            width: state.width
+          });
+          setStatus("ポイント線を追加しました。");
+        }
+        state.pointerId = null;
+        state.points = [];
+        state.previewPath = null;
+        state.dragged = false;
+      }
+
+      stage.addEventListener("pointerup", (event) => {
+        if (annotationMode !== "point") return;
+        finishPath(event);
+      });
+
+      stage.addEventListener("pointercancel", (event) => {
+        if (annotationMode !== "point") return;
+        finishPath(event);
+      });
+
+      stage.addEventListener("click", (event) => {
+        if (annotationMode !== "comment") return;
+        if (event.target instanceof Element && event.target.closest(".annotation-note")) return;
+        const point = getStagePoint(stage, event.clientX, event.clientY);
+        if (!point) return;
+        const trimmed = commentInput.value.trim();
+        if (!trimmed) {
+          setStatus("先にコメントを入力してください。");
+          commentInput.focus();
+          return;
+        }
+        addAnnotationNote(stage, point, trimmed);
+        commentInput.value = "";
+        commentInput.focus();
+        setStatus("コメントを追加しました。");
       });
     }
 
@@ -1609,6 +2046,12 @@
       compareTimelines.classList.toggle("hidden", !compare);
       timelineSlider.classList.toggle("hidden", compare);
       layoutRow.classList.toggle("hidden", !compare);
+      [singleLayout, leftStage, rightStage].forEach((stage) => {
+        stage.classList.remove("annotation-active");
+      });
+      visibleStages().forEach((stage) => {
+        stage.classList.toggle("annotation-active", annotationMode !== "none");
+      });
     }
 
     function setCompareLayoutMode(mode) {
@@ -1853,6 +2296,9 @@
       setMode("single");
       setCompareLayoutMode("horizontal");
       applySpeed(1);
+      [singleLayout, leftStage, rightStage].forEach(clearAnnotationsForStage);
+      commentInput.value = "";
+      setAnnotationMode("none", { force: true });
 
       compareStartLeft = 0;
       compareStartRight = 0;
@@ -1998,6 +2444,21 @@
     });
     stepBackButton.addEventListener("click", () => stepAll(-1 / 30));
     stepForwardButton.addEventListener("click", () => stepAll(1 / 30));
+    annotationCommentButton.addEventListener("click", () => setAnnotationMode("comment"));
+    annotationPointButton.addEventListener("click", () => setAnnotationMode("point"));
+    clearAnnotationsButton.addEventListener("click", () => {
+      visibleStages().forEach(clearAnnotationsForStage);
+      commentInput.value = "";
+      setStatus("表示中の注釈をクリアしました。");
+    });
+    pointColorInput.addEventListener("input", () => {
+      pointStrokeColor = pointColorInput.value;
+      syncPointControls();
+    });
+    pointSizeInput.addEventListener("input", () => {
+      pointStrokeWidth = Number(pointSizeInput.value);
+      syncPointControls();
+    });
 
     setLeftStartButton.addEventListener("click", () => {
       toggleCompareStart(setLeftStartButton, leftVideo, leftStartLabel, "left");
@@ -2044,9 +2505,13 @@
     syncMiniSliderFill(rightSlider);
     syncSingleOpenButton();
     syncCompareOpenButton();
+    syncPointControls();
     setupZoom(singleLayout, singleVideo);
     setupZoom(leftStage, leftVideo);
     setupZoom(rightStage, rightVideo);
+    setupAnnotations(singleLayout);
+    setupAnnotations(leftStage);
+    setupAnnotations(rightStage);
 
     window.addEventListener("beforeunload", () => {
       [singleVideo, leftVideo, rightVideo].forEach(revokeVideoSource);
