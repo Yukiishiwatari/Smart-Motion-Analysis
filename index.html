@@ -783,8 +783,6 @@
       pointer-events: none;
     }
     .annotation-path {
-      stroke: #ffd84d;
-      stroke-width: 3;
       fill: none;
       stroke-linecap: round;
       stroke-linejoin: round;
@@ -1132,6 +1130,43 @@
       color: var(--muted);
       line-height: 1.6;
     }
+    .point-panel {
+      display: grid;
+      gap: 10px;
+      margin-top: 4px;
+      padding: 12px;
+      border: 1px solid rgba(120, 164, 255, 0.16);
+      border-radius: 20px;
+      background: rgba(10, 18, 34, 0.52);
+    }
+    .point-panel-row {
+      display: grid;
+      grid-template-columns: 86px 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .point-panel label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .point-panel input[type="color"] {
+      width: 100%;
+      min-width: 0;
+      height: 42px;
+      border: 1px solid rgba(120, 164, 255, 0.16);
+      border-radius: 12px;
+      background: rgba(4, 10, 20, 0.66);
+      padding: 4px;
+    }
+    .point-panel input[type="range"] {
+      width: 100%;
+    }
+    .point-value {
+      min-width: 42px;
+      text-align: right;
+      font-size: 13px;
+      color: var(--ink);
+    }
     .share-actions {
       display: flex;
       gap: 10px;
@@ -1391,6 +1426,19 @@
             <textarea id="commentInput" placeholder="コメントを入力してから、動画上の置きたい位置をタップしてください。"></textarea>
             <div class="comment-hint">コメントモード中に動画をタップすると、この内容がその位置に配置されます。</div>
           </div>
+          <div id="pointPanel" class="point-panel hidden">
+            <div class="point-panel-row">
+              <label for="pointColorInput">線の色</label>
+              <input id="pointColorInput" type="color" value="#ffd84d" />
+              <span id="pointColorLabel" class="point-value">黄</span>
+            </div>
+            <div class="point-panel-row">
+              <label for="pointSizeInput">線の太さ</label>
+              <input id="pointSizeInput" type="range" min="2" max="12" step="1" value="3" />
+              <span id="pointSizeLabel" class="point-value">3px</span>
+            </div>
+            <div class="comment-hint">ポイントモード中は、ここで選んだ色と太さで線を描けます。</div>
+          </div>
         </div>
         <div class="status" id="statusText"></div>
       </div>
@@ -1450,6 +1498,11 @@
     const clearAnnotationsButton = document.getElementById("clearAnnotationsButton");
     const commentPanel = document.getElementById("commentPanel");
     const commentInput = document.getElementById("commentInput");
+    const pointPanel = document.getElementById("pointPanel");
+    const pointColorInput = document.getElementById("pointColorInput");
+    const pointColorLabel = document.getElementById("pointColorLabel");
+    const pointSizeInput = document.getElementById("pointSizeInput");
+    const pointSizeLabel = document.getElementById("pointSizeLabel");
 
     let currentMode = "single";
     let currentSpeed = 1;
@@ -1466,6 +1519,8 @@
     let compareLayoutMode = "horizontal";
     let compareLayoutManualOverride = false;
     let annotationMode = "none";
+    let pointStrokeColor = pointColorInput.value;
+    let pointStrokeWidth = Number(pointSizeInput.value);
 
     function clampPercent(value) {
       return Math.max(0, Math.min(100, value));
@@ -1505,11 +1560,28 @@
       return path;
     }
 
-    function addAnnotationPath(stage, points, isPreview = false) {
+    function getColorName(hex) {
+      const normalized = hex.toLowerCase();
+      if (normalized === "#ffd84d") return "黄";
+      if (normalized === "#ff5f57") return "赤";
+      if (normalized === "#63b3ff") return "青";
+      if (normalized === "#4cd964") return "緑";
+      return hex.toUpperCase();
+    }
+
+    function syncPointControls() {
+      pointColorLabel.textContent = getColorName(pointStrokeColor);
+      pointSizeLabel.textContent = `${pointStrokeWidth}px`;
+    }
+
+    function addAnnotationPath(stage, points, options = {}) {
       const { svg } = getAnnotationElements(stage);
       if (!svg) return null;
+      const { isPreview = false, color = pointStrokeColor, width = pointStrokeWidth } = options;
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute("d", buildSmoothPath(points));
+      path.setAttribute("stroke", color);
+      path.setAttribute("stroke-width", String(width));
       path.classList.add("annotation-path");
       if (isPreview) path.classList.add("preview");
       svg.appendChild(path);
@@ -1561,6 +1633,7 @@
       annotationCommentButton.classList.toggle("mode-active", nextMode === "comment");
       annotationPointButton.classList.toggle("mode-active", nextMode === "point");
       commentPanel.classList.toggle("hidden", nextMode !== "comment");
+      pointPanel.classList.toggle("hidden", nextMode !== "point");
       [singleLayout, leftStage, rightStage].forEach((stage) => {
         stage.classList.remove("annotation-active");
       });
@@ -1571,6 +1644,7 @@
         commentInput.focus();
         setStatus("コメントモードです。下の入力欄に書いてから、動画上をタップしてください。");
       } else if (nextMode === "point") {
+        syncPointControls();
         setStatus("ポイントモードです。動画上をなぞると滑らかな線を引けます。");
       } else {
         setStatus("通常操作に戻しました。");
@@ -1820,7 +1894,9 @@
         pointerId: null,
         points: [],
         previewPath: null,
-        dragged: false
+        dragged: false,
+        color: pointStrokeColor,
+        width: pointStrokeWidth
       };
       annotationStates.set(stage, state);
 
@@ -1832,8 +1908,14 @@
         state.pointerId = event.pointerId;
         state.points = [point];
         state.dragged = false;
+        state.color = pointStrokeColor;
+        state.width = pointStrokeWidth;
         if (state.previewPath) state.previewPath.remove();
-        state.previewPath = addAnnotationPath(stage, state.points, true);
+        state.previewPath = addAnnotationPath(stage, state.points, {
+          isPreview: true,
+          color: state.color,
+          width: state.width
+        });
         stage.setPointerCapture(event.pointerId);
         event.preventDefault();
       });
@@ -1859,7 +1941,10 @@
         }
         if (state.previewPath) state.previewPath.remove();
         if (state.dragged && state.points.length > 1) {
-          addAnnotationPath(stage, state.points, false);
+          addAnnotationPath(stage, state.points, {
+            color: state.color,
+            width: state.width
+          });
           setStatus("ポイント線を追加しました。");
         }
         state.pointerId = null;
@@ -2331,6 +2416,14 @@
       commentInput.value = "";
       setStatus("表示中の注釈をクリアしました。");
     });
+    pointColorInput.addEventListener("input", () => {
+      pointStrokeColor = pointColorInput.value;
+      syncPointControls();
+    });
+    pointSizeInput.addEventListener("input", () => {
+      pointStrokeWidth = Number(pointSizeInput.value);
+      syncPointControls();
+    });
 
     setLeftStartButton.addEventListener("click", () => {
       toggleCompareStart(setLeftStartButton, leftVideo, leftStartLabel, "left");
@@ -2377,6 +2470,7 @@
     syncMiniSliderFill(rightSlider);
     syncSingleOpenButton();
     syncCompareOpenButton();
+    syncPointControls();
     setupZoom(singleLayout, singleVideo);
     setupZoom(leftStage, leftVideo);
     setupZoom(rightStage, rightVideo);
