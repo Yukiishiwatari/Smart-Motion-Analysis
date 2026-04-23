@@ -1049,8 +1049,7 @@
     }
     .transport button, .share-actions button {
       border: 0;
-      border-radius: 999px;
-      min-height: 44px;
+      min-height: 46px;
       padding: 10px 14px;
       cursor: pointer;
       background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
@@ -1062,8 +1061,29 @@
     .transport button {
       flex: 1 1 0;
       min-width: 0;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
     }
-    .transport button.primary {
+    .transport button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+    .transport button:active {
+      transform: translateY(0) scale(0.985);
+    }
+    .transport .frame-button {
+      flex: 0.9 1 0;
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05)),
+        linear-gradient(135deg, rgba(154, 209, 255, 0.1), transparent 60%);
+      border: 1px solid rgba(120, 164, 255, 0.14);
+    }
+    .transport .play-button {
+      flex: 1.2 1 0;
+      border-radius: 999px;
+      min-height: 52px;
       background: linear-gradient(180deg, #79b7ff, var(--accent));
       color: #f4f8ff;
       font-weight: 700;
@@ -1073,24 +1093,41 @@
     }
     .bottom-back {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
       gap: 8px;
       flex-wrap: wrap;
       padding-top: 2px;
     }
     .bottom-back button {
-      flex: 0 0 auto;
+      flex: 1 1 0;
       border: 1px solid var(--line);
       border-radius: 999px;
       min-height: 42px;
-      min-width: 88px;
-      padding: 8px 16px;
+      min-width: 0;
+      padding: 8px 12px;
       cursor: pointer;
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
       color: var(--ink);
       box-shadow:
         inset 0 1px 0 rgba(255,255,255,0.04),
         0 10px 18px rgba(0, 0, 0, 0.14);
+      text-align: center;
+      white-space: nowrap;
+    }
+    .bottom-back button.back-button {
+      flex: 0 0 100%;
+      margin-top: 4px;
+      min-height: 48px;
+      border-radius: 20px;
+      border-color: rgba(120, 164, 255, 0.22);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05)),
+        linear-gradient(135deg, rgba(154, 209, 255, 0.12), transparent 64%);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.06),
+        0 14px 24px rgba(0, 0, 0, 0.16);
     }
     .bottom-back button.danger {
       border-color: rgba(255, 111, 97, 0.2);
@@ -1412,19 +1449,12 @@
         </div>
         <div class="bottom-actions">
           <div class="transport">
-            <button id="stepBackButton">-1コマ</button>
-            <button class="primary" id="playButton">同時再生</button>
-            <button id="stepForwardButton">+1コマ</button>
-          </div>
-          <div class="bottom-back">
-            <button id="annotationCommentButton" type="button">コメント</button>
-            <button id="annotationPointButton" type="button">ポイント</button>
-            <button id="clearAnnotationsButton" class="danger" type="button">クリア</button>
-            <button id="backButton">戻る</button>
+            <button id="stepBackButton" class="frame-button">-1コマ</button>
+            <button class="primary play-button" id="playButton">同時再生</button>
+            <button id="stepForwardButton" class="frame-button">+1コマ</button>
           </div>
           <div id="commentPanel" class="comment-panel hidden">
             <textarea id="commentInput" placeholder="コメントを入力してから、動画上の置きたい位置をタップしてください。"></textarea>
-            <div class="comment-hint">コメントモード中に動画をタップすると、この内容がその位置に配置されます。</div>
           </div>
           <div id="pointPanel" class="point-panel hidden">
             <div class="point-panel-row">
@@ -1437,7 +1467,12 @@
               <input id="pointSizeInput" type="range" min="2" max="12" step="1" value="3" />
               <span id="pointSizeLabel" class="point-value">3px</span>
             </div>
-            <div class="comment-hint">ポイントモード中は、ここで選んだ色と太さで線を描けます。</div>
+          </div>
+          <div class="bottom-back">
+            <button id="annotationCommentButton" type="button">コメント</button>
+            <button id="annotationPointButton" type="button">ポイント</button>
+            <button id="clearAnnotationsButton" class="danger" type="button">クリア</button>
+            <button id="backButton" class="back-button">戻る</button>
           </div>
         </div>
         <div class="status" id="statusText"></div>
@@ -1642,10 +1677,10 @@
       });
       if (nextMode === "comment") {
         commentInput.focus();
-        setStatus("コメントモードです。下の入力欄に書いてから、動画上をタップしてください。");
+        setStatus("動画をタップして、コメントを追加してください。");
       } else if (nextMode === "point") {
         syncPointControls();
-        setStatus("ポイントモードです。動画上をなぞると滑らかな線を引けます。");
+        setStatus("ポイントモードです。動画上をなぞると線を引けます。");
       } else {
         setStatus("通常操作に戻しました。");
       }
