@@ -361,7 +361,7 @@
     .home-shell {
       width: min(430px, calc(100vw - 24px));
       display: grid;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto 1fr;
       gap: 18px;
       min-height: 100vh;
       min-height: 100svh;
@@ -711,25 +711,6 @@
     }
     .mode-grid.home-mode-grid {
       gap: 12px;
-    }
-    .home-footer {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 22px;
-    }
-    .home-credit {
-      color: rgba(158, 176, 201, 0.82);
-      font-size: 10px;
-      line-height: 1.5;
-      letter-spacing: 0.08em;
-      text-align: center;
-      text-transform: uppercase;
-    }
-    .home-credit strong {
-      color: var(--ink);
-      font-size: inherit;
-      letter-spacing: inherit;
     }
     .mode-card, .toolbar, .timeline-shell {
       border: 1px solid var(--line);
@@ -1717,9 +1698,6 @@
         </div>
       </main>
 
-      <footer class="home-footer">
-        <div class="home-credit">Created by <strong>Yuki Ishiwatari</strong></div>
-      </footer>
     </div>
   </section>
 
